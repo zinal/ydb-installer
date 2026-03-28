@@ -1060,7 +1060,31 @@ FR-UI-009A. **Operator** SHALL have access to configuration inputs where permitt
 
 FR-UI-009B. **Observer** SHALL NOT have access to configuration inputs or confirmation controls reserved for **Operator** (FR-ACCESS-002, FR-ACCESS-003, FR-ACCESS-005).
 
-### 18.1 Globalization Support
+### 18.1 Visual Design and Layout
+
+FR-UI-010. The Installer UI visual design SHALL align with the colors, typography, and general visual language used in the YDB UI ecosystem, using `ydb-platform/ydb-ui-components` and `ydb-platform/ydb-embedded-ui` as the primary references.
+
+FR-UI-010A. The Installer UI SHALL use the same or compatible default color palette and font families as the referenced YDB UI patterns unless a documented product-specific exception requires otherwise.
+
+FR-UI-010B. Custom visual styling introduced for Installer-specific workflows SHALL remain consistent with the referenced YDB UI visual language and SHALL NOT create a conflicting brand or design system within the product.
+
+FR-UI-011. The UI SHALL prefer theme variables, design tokens, and reusable component styles from `ydb-platform/ydb-ui-components` and related YDB UI patterns instead of ad hoc hard-coded styling where equivalent reusable styling exists.
+
+FR-UI-012. The primary Installer workflows SHALL use a compact layout that remains usable on smaller screens and typical laptop viewports without relying on large-screen-only compositions.
+
+FR-UI-012A. For the Home, Configuration, Monitoring, and Logs screens, the compact layout SHALL preserve readability and operability by avoiding unnecessary horizontal scrolling, overlapping controls, and clipped primary actions at supported smaller viewport sizes.
+
+FR-UI-012B. Compact presentation SHALL reduce unnecessary whitespace and oversized chrome while preserving clear visual separation of navigation, form content, status information, and destructive actions.
+
+FR-UI-013. The layout SHALL expand gracefully on larger screens by using additional width for denser tables, side-by-side panels, broader summaries, or richer monitoring views when that improves operator efficiency.
+
+FR-UI-013A. Larger-screen expansion SHALL preserve the same navigation model and information hierarchy used on smaller screens and SHALL NOT rely on stretched controls or empty filler space as the primary use of additional width.
+
+FR-UI-014. The UI SHALL support responsive or adaptive layout behavior across supported screen sizes, including stacked or collapsed arrangements on smaller screens and multi-column arrangements on larger screens where appropriate.
+
+FR-UI-015. For step-based configuration and execution screens, the UI SHALL prioritize keeping the current step context, primary actions, and critical warnings easy to locate without excessive scrolling.
+
+### 18.2 Globalization Support
 
 FR-I18N-001. All operator-facing messages shown in the Installer UI SHALL be loaded from language-dependent resource sets selected according to the language chosen by the user or operator context.
 
@@ -1104,6 +1128,7 @@ This specification is satisfied when the product can:
 8. reduce accidental disk destruction through discovery-based confirmation and explicit approval for destructive steps;
 9. support cancellation and clear failure reporting;
 10. produce reusable artifacts and a final installation report;
-11. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English;
-12. run in a copy-and-use deployment model without mandatory external infrastructure services for baseline operation; and
-13. avoid mandatory dependence on existing Ansible- or Python-based automation by preferring direct reuse or embedding of `ydbops` capabilities.
+11. follow YDB UI visual patterns, including compatible colors and fonts, while remaining compact on smaller screens and expanding cleanly on larger screens;
+12. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English;
+13. run in a copy-and-use deployment model without mandatory external infrastructure services for baseline operation; and
+14. avoid mandatory dependence on existing Ansible- or Python-based automation by preferring direct reuse or embedding of `ydbops` capabilities.
