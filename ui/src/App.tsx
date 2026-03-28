@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AppLayout } from './layout/AppLayout';
 import { HomePage } from './pages/HomePage';
-import { BatchPage } from './pages/BatchPage';
 import { WizardPage } from './pages/session/WizardPage';
 import { MonitorPage } from './pages/session/MonitorPage';
 import { LogsPage } from './pages/LogsPage';
@@ -24,7 +23,6 @@ export default function App() {
               <Route path="/monitor" element={<Navigate to="/monitoring" replace />} />
               <Route path="/logs" element={<LogsPage />} />
               <Route path="/results" element={<ResultsPage />} />
-              <Route path="/batch" element={<BatchPage />} />
               <Route path="/logout" element={<LogoutPage />} />
               <Route path="/sessions/:sessionId/wizard" element={<Navigate to="/configuration" replace />} />
               <Route path="/sessions/:sessionId/monitor" element={<Navigate to="/monitoring" replace />} />

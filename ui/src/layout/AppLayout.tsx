@@ -32,7 +32,6 @@ export function AppLayout() {
               <RouterLink to="/monitoring">{t('nav.monitoring')}</RouterLink>
               <RouterLink to="/logs">{t('nav.logs')}</RouterLink>
               <RouterLink to="/results">{t('nav.results')}</RouterLink>
-              <RouterLink to="/batch">{t('nav.batch')}</RouterLink>
               <Text variant="body-2" color="complementary">
                 {role === 'operator' ? t('auth.roleOperator') : t('auth.roleObserver')}
               </Text>

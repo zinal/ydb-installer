@@ -74,3 +74,24 @@ body.root {
   color: var(--g-color-text-link);
   text-decoration: underline;
 }
+
+/* Target definition targets table */
+.installer-targets-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--g-text-body-1-font-size);
+  line-height: var(--g-text-body-1-line-height);
+}
+
+.installer-targets-table th,
+.installer-targets-table td {
+  border: 1px solid var(--g-color-line-generic);
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.installer-targets-table th {
+  font-weight: 600;
+  background: var(--g-color-base-generic);
+}

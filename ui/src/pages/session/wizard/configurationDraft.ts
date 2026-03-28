@@ -9,14 +9,23 @@ export interface PileDef {
   failureDomain: string;
 }
 
+/** Default SSH block: password, secret key, or agent only — no “use default” (§6.6.1). */
+export type DefaultSshAuthMode = 'password' | 'secret_key' | 'agent';
+
+/** Per target row: use default block auth, or override with password / secret key / agent (§6.6.1). */
+export type TargetRowAuthMode = 'default' | DefaultSshAuthMode;
+
 export interface ConfigurationDraft {
-  /** Default SSH (§6.6.1); secrets are UI-only in prototype — never logged. */
+  /** Default SSH; secrets are UI-only in prototype — never logged. */
   defaultSsh: {
+    authMode: DefaultSshAuthMode;
     port: number;
     user: string;
-    useAgent: boolean;
     passwordSet: boolean;
+    keySelected: boolean;
   };
+  /** Per react-hook-form field `id`. */
+  targetAuthModeByFieldId: Record<string, TargetRowAuthMode>;
   discoveryAcknowledged: boolean;
   layout: {
     preset: string;
@@ -74,11 +83,13 @@ export interface ConfigurationDraft {
 
 export const initialConfigurationDraft = (): ConfigurationDraft => ({
   defaultSsh: {
+    authMode: 'agent',
     port: 22,
     user: '',
-    useAgent: true,
     passwordSet: false,
+    keySelected: false,
   },
+  targetAuthModeByFieldId: {},
   discoveryAcknowledged: false,
   layout: {
     preset: '',

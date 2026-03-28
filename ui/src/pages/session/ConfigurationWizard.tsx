@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Button, Card, Flex, Loader, Stepper, Text } from '@gravity-ui/uikit';
+import { Button, Flex, Loader, Stepper, Text } from '@gravity-ui/uikit';
 import { api, type TargetHost } from '@/api/client';
 import {
   clampStructuralWizardStep,
@@ -27,17 +27,14 @@ import { ArtifactsStep } from './wizard/ArtifactsStep';
 import { DatabaseStep } from './wizard/DatabaseStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { RunStateStep } from './wizard/RunStateStep';
-
-type TargetsForm = { targets: TargetHost[] };
-
-function normalizeTarget(t: TargetHost): TargetHost {
+import type { TargetFormRow, TargetsForm } from './wizard/targetForm';
+import { formatAddressForForm, parseHostPort } from './wizard/parseHostPort';
+function normalizeTarget(t: TargetHost): TargetFormRow {
   return {
-    address: t.address ?? '',
-    port: t.port && t.port > 0 ? t.port : 22,
+    address: formatAddressForForm(t),
     user: t.user ?? '',
-    hostId: t.hostId ?? '',
-    bastionHost: t.bastionHost ?? '',
-    bastionUser: t.bastionUser ?? '',
+    sshPassword: undefined,
+    sshKeySelected: false,
   };
 }
 
@@ -48,9 +45,14 @@ export function ConfigurationWizard() {
 
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialStepApplied = useRef(false);
+  /** After session + discovery are ready, initial wizard step is applied from URL or sessionStorage. */
+  const [wizardStepReady, setWizardStepReady] = useState(false);
   const prevPersistedStep = useRef<number | null>(null);
+  /** Avoids re-inferring SSH auth mode on every render; keyed to loaded session targets. */
+  const inferredTargetAuthSig = useRef<string | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
+  /** Furthest step index the operator has reached (for Stepper success markers). */
+  const [maxReachedStep, setMaxReachedStep] = useState(0);
   const [draft, setDraft] = useState<ConfigurationDraft>(() => initialConfigurationDraft());
   const [navHint, setNavHint] = useState<string | null>(null);
 
@@ -73,8 +75,8 @@ export function ConfigurationWizard() {
     enabled: Boolean(sessionId),
   });
 
-  const { register, control, handleSubmit, reset } = useForm<TargetsForm>({
-    defaultValues: { targets: [{ address: '', port: 22, user: '' }] },
+  const { register, control, handleSubmit, reset, setValue } = useForm<TargetsForm>({
+    defaultValues: { targets: [{ address: '', user: '', sshPassword: '', sshKeySelected: false }] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'targets' });
@@ -83,9 +85,14 @@ export function ConfigurationWizard() {
   const snapshot = discoveryQuery.data;
 
   useEffect(() => {
-    initialStepApplied.current = false;
+    setWizardStepReady(false);
     prevPersistedStep.current = null;
+    inferredTargetAuthSig.current = null;
   }, [sessionId]);
+
+  useEffect(() => {
+    setMaxReachedStep((m) => Math.max(m, stepIndex));
+  }, [stepIndex]);
 
   useEffect(() => {
     try {
@@ -103,25 +110,45 @@ export function ConfigurationWizard() {
   useEffect(() => {
     if (!sessionId || !session) return;
     if (discoveryQuery.isLoading) return;
-    if (initialStepApplied.current) return;
-    initialStepApplied.current = true;
+    if (wizardStepReady) return;
 
     const param = searchParams.get('step');
-    let desired: number;
+    let desired = 0;
     if (param != null) {
       const n = parseInt(param, 10);
-      desired = Number.isFinite(n) ? n : 0;
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('step');
-      setSearchParams(nextParams, { replace: true });
+      if (Number.isFinite(n)) desired = n;
     } else {
-      const raw = sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
-      desired = raw != null && Number.isFinite(parseInt(raw, 10)) ? parseInt(raw, 10) : 0;
+      try {
+        const raw = sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
+        if (raw != null && Number.isFinite(parseInt(raw, 10))) desired = parseInt(raw, 10);
+      } catch {
+        /* ignore */
+      }
     }
 
     const next = clampStructuralWizardStep(desired, session, snapshot);
     setStepIndex(next);
-  }, [sessionId, session, snapshot, discoveryQuery.isLoading, searchParams, setSearchParams]);
+    setWizardStepReady(true);
+  }, [sessionId, session, snapshot, discoveryQuery.isLoading, wizardStepReady, searchParams]);
+
+  useEffect(() => {
+    if (!sessionId || !wizardStepReady) return;
+    const cur = searchParams.get('step');
+    if (cur === String(stepIndex)) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('step', String(stepIndex));
+    setSearchParams(nextParams, { replace: true });
+  }, [sessionId, wizardStepReady, stepIndex, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!sessionId || !session || !wizardStepReady) return;
+    const param = searchParams.get('step');
+    if (param == null) return;
+    const n = parseInt(param, 10);
+    if (!Number.isFinite(n)) return;
+    const next = clampStructuralWizardStep(n, session, snapshot);
+    setStepIndex((s) => (s !== next ? next : s));
+  }, [searchParams, sessionId, session, snapshot, wizardStepReady]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -144,6 +171,32 @@ export function ConfigurationWizard() {
       reset({ targets: tgs.map(normalizeTarget) });
     }
   }, [sessionQuery.data, reset]);
+
+  useEffect(() => {
+    const tgs = sessionQuery.data?.targets;
+    if (!tgs?.length || !sessionId) return;
+    if (fields.length !== tgs.length) return;
+    const sig = `${sessionId}:${JSON.stringify(
+      tgs.map((x) => [x.address, x.port ?? null, x.user ?? '']),
+    )}`;
+    if (inferredTargetAuthSig.current === sig) return;
+    inferredTargetAuthSig.current = sig;
+
+    patchDraft((d) => {
+      const next = { ...d.targetAuthModeByFieldId };
+      fields.forEach((f, i) => {
+        const row = tgs[i]!;
+        const formatted = formatAddressForForm(row);
+        const { port: p, explicitPort } = parseHostPort(formatted);
+        const user = (row.user ?? '').trim();
+        const defPort = d.defaultSsh.port;
+        const defUser = d.defaultSsh.user.trim();
+        const effectivePort = explicitPort ? p : defPort;
+        next[f.id] = effectivePort === defPort && user === defUser ? 'default' : 'password';
+      });
+      return { ...d, targetAuthModeByFieldId: next };
+    });
+  }, [sessionQuery.data?.targets, fields, sessionId, patchDraft]);
 
   useEffect(() => {
     if (!snapshot?.hosts?.length) return;
@@ -186,16 +239,21 @@ export function ConfigurationWizard() {
   });
 
   const onSaveTargets = handleSubmit((data) => {
-    const cleaned = data.targets
-      .map((row) => ({
-        address: row.address.trim(),
-        port: row.port && row.port > 0 ? row.port : 22,
+    const cleaned: TargetHost[] = [];
+    data.targets.forEach((row, idx) => {
+      const { host, port: parsedPort, explicitPort } = parseHostPort(row.address);
+      const port = explicitPort ? parsedPort : draft.defaultSsh.port;
+      const trimmedHost = host.trim();
+      if (!trimmedHost.length) {
+        return;
+      }
+      cleaned.push({
+        address: trimmedHost,
+        port,
         user: row.user?.trim() || undefined,
-        hostId: row.hostId?.trim() || undefined,
-        bastionHost: row.bastionHost?.trim() || undefined,
-        bastionUser: row.bastionUser?.trim() || undefined,
-      }))
-      .filter((r) => r.address.length > 0);
+        hostId: String(idx + 1),
+      });
+    });
     if (cleaned.length === 0) {
       return;
     }
@@ -254,6 +312,8 @@ export function ConfigurationWizard() {
         return (
           <TargetsStep
             register={register}
+            control={control}
+            setValue={setValue}
             fields={fields}
             append={append}
             remove={remove}
@@ -354,38 +414,21 @@ export function ConfigurationWizard() {
 
       <div className="wizard-stepper-scroll">
         <Stepper value={String(stepIndex)} onUpdate={(id) => trySetStep(Number(id))}>
-          {wizardSteps.map((step, i) => (
-            <Stepper.Item
-              key={step.id}
-              id={String(i)}
-              disabled={!canReachStep(i, session, snapshot, draft)}
-            >
-              {t(step.labelKey)}
-            </Stepper.Item>
-          ))}
+          {wizardSteps.map((step, i) => {
+            const completed = i !== stepIndex && i < maxReachedStep;
+            return (
+              <Stepper.Item
+                key={step.id}
+                id={String(i)}
+                view={completed ? 'success' : 'idle'}
+                disabled={!canReachStep(i, session, snapshot, draft)}
+              >
+                {t(step.labelKey)}
+              </Stepper.Item>
+            );
+          })}
         </Stepper>
       </div>
-
-      {session?.phases && session.phases.length > 0 && (
-        <Card style={{ padding: 16 }}>
-          <Text variant="subheader-2" style={{ marginBottom: 8 }}>
-            {t('wizard.sessionPhases')}
-          </Text>
-          <Flex direction="column" gap={2}>
-            {session.phases.map((p) => (
-              <Flex key={p.phaseId} gap={3} alignItems="center">
-                <Text>{p.name}</Text>
-                <Text color="secondary">{p.state}</Text>
-                {p.message ? (
-                  <Text color="danger" style={{ fontSize: 12 }}>
-                    {p.message}
-                  </Text>
-                ) : null}
-              </Flex>
-            ))}
-          </Flex>
-        </Card>
-      )}
 
       {sessionQuery.isLoading && <Loader size="l" />}
       {sessionQuery.error && (
