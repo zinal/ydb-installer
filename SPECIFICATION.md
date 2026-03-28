@@ -15,7 +15,7 @@ The specification addresses the following capabilities:
 - orchestrating installation phases on remote hosts;
 - monitoring progress, validating configuration, cancelling runs, and reporting results through a web UI.
 
-It does not prescribe low-level implementation details of the automation backend beyond externally observable functional behavior.
+It does not prescribe low-level implementation details of the automation backend beyond externally observable functional behavior, except where this specification states explicit implementation-technology requirements.
 
 ### 1.3 Source Basis
 
@@ -23,7 +23,9 @@ This specification draws on the following sources. The project SHALL maintain a 
 
 - YDB manual deployment documentation;
 - YDB Ansible deployment documentation;
-- the `ydb-platform/ydb-ansible` repository: README, playbooks, and role behavior.
+- the `ydb-platform/ydb-ansible` repository: README, playbooks, and role behavior;
+- the [`ydb-platform/ydb-ui-components`](https://github.com/ydb-platform/ydb-ui-components) repository for the UI component library;
+- the [`ydb-platform/ydb-embedded-ui`](https://github.com/ydb-platform/ydb-embedded-ui) repository as the reference source of `ydb-ui-components` usage examples and integration patterns.
 
 The content of those sources is referenced as it existed on **2026-03-28**, unless a later revision of this document states otherwise.
 
@@ -47,16 +49,6 @@ The content of those sources is referenced as it existed on **2026-03-28**, unle
 - `Expert Override` (disk selection): an explicit mode that allows the operator to specify block device identifiers manually instead of choosing only from the Discovery Snapshot, subject to warnings and any audit requirements stated elsewhere in this document.
 - `Auto Proceed`: a batch-mode option (declared in the batch specification or equivalent settings) that skips interactive confirmation for destructive steps while preflight validation and other blocking checks still apply unless this document states otherwise for that option.
 - `Degraded Completion State`: a session outcome in which the operator explicitly accepts completion despite failed or incomplete verification checks; the Installer records which checks did not pass and the fact of operator acceptance.
-
-### 1.5 Document Revision
-
-| Field | Value |
-|-------|-------|
-| Version | 0.1 |
-| Status | Draft |
-| Last updated | 2026-03-28 |
-
-When source materials in §1.3 or product scope change materially, increment the version and update **Last updated**.
 
 ## 2. Product Overview
 
@@ -84,6 +76,14 @@ The following items are outside mandatory scope unless a future revision adds th
 - migration between YDB configuration V1 and V2;
 - automated rollback of partially completed installations;
 - full lifecycle work unrelated to installation (for example routine upgrades and reconfiguration).
+
+### 2.4 Implementation Technology Requirements
+
+FR-TECH-001. The Installer automation backend and REST API implementation SHALL be written in `Go` (`Golang`).
+
+FR-TECH-002. The Installer web UI SHALL use the `ydb-platform/ydb-ui-components` library as its primary UI component set.
+
+FR-TECH-003. The project SHALL use the `ydb-platform/ydb-embedded-ui` repository as the reference source of usage examples and integration patterns for `ydb-platform/ydb-ui-components`.
 
 ## 3. Actors and User Roles
 
@@ -597,6 +597,16 @@ FR-UI-007. The UI SHALL use distinct terminology for:
 
 FR-UI-008. When bridge mode is enabled, the UI SHALL present pile-related settings and status explicitly instead of folding them into generic multi-data-center wording.
 
+### 18.1 Globalization Support
+
+FR-I18N-001. All operator-facing messages shown in the Installer UI SHALL be loaded from language-dependent resource sets selected according to the language chosen by the user or operator context.
+
+FR-I18N-002. If the selected language is unsupported, or if a required UI resource is unavailable for that language, the Installer SHALL use the English resource value as the fallback.
+
+FR-I18N-003. UI language resources SHALL be loaded from supplied resource files and SHALL NOT be compiled into the Installer backend binary as the only supported source of localized text.
+
+FR-I18N-004. REST API messages and log messages SHALL be written in English.
+
 ## 19. Usability and Installer Best Practices
 
 FR-USABILITY-001. The Installer SHALL default to safe values where YDB documentation gives clear recommended defaults.
@@ -623,4 +633,5 @@ This specification is satisfied when the product can:
 6. support `block-4-2`, `mirror-3-dc`, `reduced mirror-3-dc`, and bridge-enabled cluster layouts;
 7. reduce accidental disk destruction through discovery-based confirmation and explicit approval for destructive steps;
 8. support cancellation and clear failure reporting;
-9. produce reusable artifacts and a final installation report.
+9. produce reusable artifacts and a final installation report;
+10. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English.
