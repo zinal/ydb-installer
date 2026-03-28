@@ -1,0 +1,17 @@
+---
+description: Backend and API conventions for Go code
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go Backend Rules
+
+For backend work, follow `AGENTS.md`, `SPECIFICATION.md`, and `ARCHITECTURE.md`.
+
+- Keep backend, API, execution, discovery, and security logic in `Go`.
+- Preserve clean boundaries between `api`, `app`, `domain`, `execution`, `discovery`, `storage`, `security`, `artifacts`, and `ydbops/adapter` code.
+- Keep the REST API explicit and documented; the UI must be able to rely on public API behavior only.
+- Model long-running installation behavior as persisted phases, tasks, checkpoints, and structured status, not ad hoc goroutine state.
+- Prefer native `Go` integrations for SSH, file transfer, validation, and orchestration over shelling out.
+- Keep secret redaction and role checks close to API and reporting boundaries.
+- When behavior changes, anchor it to the relevant requirement IDs instead of copying spec text into code comments.

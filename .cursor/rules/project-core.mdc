@@ -1,0 +1,15 @@
+---
+description: Core project guardrails for all YDB Installer work
+alwaysApply: true
+---
+
+# YDB Installer Core Rules
+
+Use `AGENTS.md` as the project entry point. Treat `SPECIFICATION.md` as the source of truth for behavior and `ARCHITECTURE.md` as the source of truth for preferred implementation shape.
+
+- Reference requirement IDs or document sections instead of duplicating requirements into code, notes, or new rules.
+- Preserve the copy-and-use baseline: no mandatory external database, workflow engine, message broker, or secret manager.
+- Keep the safety model intact: discover first, validate early, destroy late.
+- Do not introduce mandatory `Ansible`, `Python`, or subprocess-heavy orchestration when direct `Go` implementation or structured `ydbops` integration is possible.
+- Protect secrets in logs, errors, reports, fixtures, and tests.
+- Prefer narrow, incremental changes that fit the current package boundaries unless the task explicitly requires refactoring.

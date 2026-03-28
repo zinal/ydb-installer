@@ -1,0 +1,17 @@
+---
+description: Frontend conventions for the installer UI
+globs: "ui/src/**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# UI Frontend Rules
+
+For UI work, follow `AGENTS.md`, `SPECIFICATION.md`, and `ARCHITECTURE.md`.
+
+- Keep the UI in `React` and `TypeScript`.
+- Use `ydb-ui-components` as the primary component library and align usage patterns with `ydb-platform/ydb-embedded-ui`.
+- Treat the documented REST API as the only application interface; do not couple UI state to backend internals.
+- Keep workflow screens aligned with the persisted installation phases and the terminology defined in the specification.
+- Externalize operator-facing strings through locale resources with English fallback.
+- Surface destructive actions, validation failures, warnings, and role-limited actions clearly.
+- Edit source assets in `ui/src` and locale files, not build output in `ui/dist` or embedded copies under `cmd/installer/web`.

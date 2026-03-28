@@ -1,0 +1,21 @@
+{
+  "app.title": "YDB Installer",
+  "nav.home": "Home",
+  "nav.batch": "Batch install",
+  "home.heading": "Installation sessions",
+  "home.newInteractive": "New interactive session",
+  "wizard.title": "Interactive installation",
+  "wizard.step.targets": "Target hosts",
+  "wizard.step.auth": "Authentication",
+  "wizard.step.discovery": "Discovery review",
+  "wizard.step.layout": "Cluster layout",
+  "wizard.step.storage": "Disk selection",
+  "wizard.step.network": "Network & endpoints",
+  "wizard.step.security": "Security & TLS",
+  "wizard.step.artifacts": "Artifacts & version",
+  "wizard.step.database": "Database settings",
+  "wizard.step.review": "Review & approval",
+  "monitor.title": "Installation progress",
+  "batch.title": "Batch installation",
+  "batch.upload": "Upload YAML or JSON specification"
+}
