@@ -24,10 +24,13 @@ This specification draws on the following sources. The project SHALL maintain a 
 - YDB manual deployment documentation;
 - YDB Ansible deployment documentation;
 - the `ydb-platform/ydb-ansible` repository: README, playbooks, and role behavior;
+- the `ydbops` tool and its source repository, when available, as a reference for reusable deployment logic;
 - the [`ydb-platform/ydb-ui-components`](https://github.com/ydb-platform/ydb-ui-components) repository for the UI component library;
 - the [`ydb-platform/ydb-embedded-ui`](https://github.com/ydb-platform/ydb-embedded-ui) repository as the reference source of `ydb-ui-components` usage examples and integration patterns.
 
 The content of those sources is referenced as it existed on **2026-03-28**, unless a later revision of this document states otherwise.
+
+Automation sources listed in this subsection are behavioral and domain references. Their inclusion here SHALL NOT be interpreted as a requirement to reuse `Ansible`-based or `Python`-based automation in the Installer implementation.
 
 ### 1.4 Definitions
 
@@ -49,12 +52,13 @@ The content of those sources is referenced as it existed on **2026-03-28**, unle
 - `Expert Override` (disk selection): an explicit mode that allows the operator to specify block device identifiers manually instead of choosing only from the Discovery Snapshot, subject to warnings and any audit requirements stated elsewhere in this document.
 - `Auto Proceed`: a batch-mode option (declared in the batch specification or equivalent settings) that skips interactive confirmation for destructive steps while preflight validation and other blocking checks still apply unless this document states otherwise for that option.
 - `Degraded Completion State`: a session outcome in which the operator explicitly accepts completion despite failed or incomplete verification checks; the Installer records which checks did not pass and the fact of operator acceptance.
+- `Copy-and-Use Deployment Model`: a distribution and operating model in which the Installer can be copied or unpacked onto a single Control Host and used without mandatory external infrastructure services such as a separate database, workflow engine, message broker, or secret manager for baseline operation.
 
 ## 2. Product Overview
 
 ### 2.1 Product Goal
 
-The Installer SHALL enable an operator to deploy YDB clusters safely and repeatably using either a guided web interface or a declarative batch specification, while respecting the principal operational steps and constraints documented for YDB.
+The Installer SHALL enable an operator to deploy YDB clusters safely and repeatably using either a guided web interface or a declarative batch specification, while respecting the principal operational steps and constraints documented for YDB and remaining practical to distribute and run in a Copy-and-Use Deployment Model.
 
 ### 2.2 Supported Scenarios
 
@@ -66,6 +70,7 @@ The Installer SHALL support at minimum:
 - single-datacenter and multi-datacenter cluster layouts;
 - bridge-mode layouts with synchronous writes across two or more piles;
 - TLS-enabled and authentication-enabled deployments;
+- copy-and-use deployment on a single Control Host;
 - offline or restricted-network deployments when the required artifacts are supplied.
 
 ### 2.3 Out of Scope
@@ -84,6 +89,18 @@ FR-TECH-001. The Installer automation backend and REST API implementation SHALL 
 FR-TECH-002. The Installer web UI SHALL use the `ydb-platform/ydb-ui-components` library as its primary UI component set.
 
 FR-TECH-003. The project SHALL use the `ydb-platform/ydb-embedded-ui` repository as the reference source of usage examples and integration patterns for `ydb-platform/ydb-ui-components`.
+
+FR-TECH-004. The Installer SHALL support the Copy-and-Use Deployment Model as a baseline operating mode.
+
+FR-TECH-005. In the baseline operating mode, the Installer SHALL NOT require a separately managed relational database, workflow engine, message broker, or external secret-management service.
+
+FR-TECH-006. The Installer SHALL prefer embedded or local components suitable for single-host operation for persistence, workflow state, and secret handling. Optional integrations with external infrastructure MAY be added later provided they are not required for baseline operation.
+
+FR-TECH-007. The Installer SHALL NOT depend on existing `Ansible`-based or `Python`-based automation as a mandatory execution path.
+
+FR-TECH-008. The preferred execution architecture SHALL reuse or embed `ydbops` capabilities directly within the Installer codebase where practical so that deployment operations, progress reporting, cancellation, and error handling remain under direct Go-level control.
+
+FR-TECH-009. If transitional compatibility requires invoking external helper executables, the Installer SHALL treat that as an implementation detail and SHALL preserve the same persisted phase model, structured status reporting, and secret-handling guarantees required elsewhere in this specification.
 
 ## 3. Actors and User Roles
 
@@ -374,6 +391,8 @@ FR-SECURITY-009. The Installer SHALL store secrets securely and separately from 
 
 FR-SECURITY-010. The Installer SHALL restrict secret visibility to authorized users.
 
+FR-SECURITY-011. Baseline secret storage SHALL operate locally on the Control Host and SHALL NOT require an external secret-management service for normal operation.
+
 ## 11. Artifact and Version Management
 
 FR-ARTIFACT-001. The Installer SHALL support the following artifact-source modes:
@@ -555,6 +574,8 @@ FR-REPORTING-004. When bridge mode is enabled, the completion report SHALL inclu
 
 FR-REPORTING-005. The Installer SHALL allow export of the effective installation specification for reuse in batch mode.
 
+FR-REPORTING-006. The Installer SHALL store session metadata, discovery snapshots, validation results, execution history, and reports using a persistence mechanism suitable for the Copy-and-Use Deployment Model, including operation from local embedded storage on the Control Host.
+
 ## 17. REST API Requirements
 
 FR-API-001. The Installer SHALL expose a documented REST API for all externally usable functions.
@@ -621,6 +642,8 @@ FR-USABILITY-005. The Installer SHALL minimize secret exposure in the UI, logs, 
 
 FR-USABILITY-006. The Installer SHALL explain blocking conditions and destructive risks in operator-oriented language, not backend jargon alone.
 
+FR-USABILITY-007. Baseline installation and first-run setup of the Installer itself SHALL require only copying or unpacking the Installer onto a supported Control Host, supplying startup configuration and local writable storage, and SHALL NOT require provisioning separate infrastructure services before the Installer can be used.
+
 ## 20. Acceptance Criteria Summary
 
 This specification is satisfied when the product can:
@@ -634,4 +657,6 @@ This specification is satisfied when the product can:
 7. reduce accidental disk destruction through discovery-based confirmation and explicit approval for destructive steps;
 8. support cancellation and clear failure reporting;
 9. produce reusable artifacts and a final installation report;
-10. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English.
+10. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English;
+11. run in a copy-and-use deployment model without mandatory external infrastructure services for baseline operation; and
+12. avoid mandatory dependence on existing Ansible- or Python-based automation by preferring direct reuse or embedding of `ydbops` capabilities.
