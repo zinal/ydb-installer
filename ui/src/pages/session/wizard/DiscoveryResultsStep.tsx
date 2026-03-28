@@ -1,5 +1,6 @@
 import { Card, Checkbox, Flex, Text } from '@gravity-ui/uikit';
 import type { DiscoverySnapshot } from '@/api/client';
+import { DISCOVERY_ACK_STORAGE_KEY } from '@/navigation/wizardStepStorage';
 import type { ConfigurationDraft } from './configurationDraft';
 import { t } from '@/i18n';
 
@@ -101,7 +102,18 @@ export function DiscoveryResultsStep({ snapshot, draft, patchDraft, readOnly }: 
           <Checkbox
             checked={draft.discoveryAcknowledged}
             disabled={readOnly || !snapshot?.collectedAt}
-            onUpdate={(v) => patchDraft((d) => ({ ...d, discoveryAcknowledged: v }))}
+            onUpdate={(v) => {
+              patchDraft((d) => ({ ...d, discoveryAcknowledged: v }));
+              try {
+                if (v) {
+                  sessionStorage.setItem(DISCOVERY_ACK_STORAGE_KEY, '1');
+                } else {
+                  sessionStorage.removeItem(DISCOVERY_ACK_STORAGE_KEY);
+                }
+              } catch {
+                /* ignore */
+              }
+            }}
           />
           <Text>{t('wizard.results.acknowledge')}</Text>
         </Flex>

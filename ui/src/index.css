@@ -24,3 +24,53 @@
   flex-wrap: nowrap;
   min-width: min-content;
 }
+
+/* —— Installer readability: larger type + higher contrast (not light-gray on white) —— */
+body.root {
+  /* Text colors: darker “muted” tiers for white background */
+  --g-color-text-secondary: #3a3a3a;
+  --g-color-text-hint: #5a5a5a;
+  --g-color-text-complementary: #2c2c2c;
+
+  /* Bump Gravity typography scale (~+2px on body tiers) */
+  --g-text-body-1-font-size: 15px;
+  --g-text-body-1-line-height: 22px;
+  --g-text-body-2-font-size: 17px;
+  --g-text-body-2-line-height: 24px;
+  --g-text-body-3-font-size: 19px;
+  --g-text-body-3-line-height: 28px;
+
+  --g-text-subheader-1-font-size: 15px;
+  --g-text-subheader-1-line-height: 22px;
+  --g-text-subheader-2-font-size: 17px;
+  --g-text-subheader-2-line-height: 24px;
+  --g-text-subheader-3-font-size: 19px;
+  --g-text-subheader-3-line-height: 28px;
+
+  --g-text-header-1-font-size: 24px;
+  --g-text-header-1-line-height: 30px;
+  --g-text-header-2-font-size: 28px;
+  --g-text-header-2-line-height: 34px;
+
+  --g-text-caption-2-font-size: 13px;
+  --g-text-caption-2-line-height: 18px;
+}
+
+.installer-main {
+  font-size: var(--g-text-body-2-font-size);
+  line-height: var(--g-text-body-2-line-height);
+}
+
+.installer-nav a {
+  font-size: var(--g-text-body-2-font-size);
+  line-height: var(--g-text-body-2-line-height);
+  color: var(--g-color-text-primary);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 4px 2px;
+}
+
+.installer-nav a:hover {
+  color: var(--g-color-text-link);
+  text-decoration: underline;
+}

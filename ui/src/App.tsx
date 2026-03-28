@@ -6,6 +6,7 @@ import { WizardPage } from './pages/session/WizardPage';
 import { MonitorPage } from './pages/session/MonitorPage';
 import { LogsPage } from './pages/LogsPage';
 import { LogoutPage } from './pages/LogoutPage';
+import { ResultsPage } from './pages/ResultsPage';
 import { InstallationSessionProvider } from './session/InstallationSessionProvider';
 import { AuthPrototypeProvider } from './session/AuthPrototypeProvider';
 
@@ -22,6 +23,7 @@ export default function App() {
               <Route path="/monitoring" element={<MonitorPage />} />
               <Route path="/monitor" element={<Navigate to="/monitoring" replace />} />
               <Route path="/logs" element={<LogsPage />} />
+              <Route path="/results" element={<ResultsPage />} />
               <Route path="/batch" element={<BatchPage />} />
               <Route path="/logout" element={<LogoutPage />} />
               <Route path="/sessions/:sessionId/wizard" element={<Navigate to="/configuration" replace />} />

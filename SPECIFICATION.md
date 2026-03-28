@@ -330,9 +330,9 @@ Path names in this subsection are illustrative and may be implemented with equiv
 
 FR-INTERACTIVE-014. Home (`/`) SHALL be the authentication entry screen.
 
-FR-INTERACTIVE-015. Home SHALL provide a role selector (`Operator` or `Observer`) and the credential entry required for that role, including password input.
+FR-INTERACTIVE-015. Home SHALL provide a role selector (`Operator` or `Observer`) and the credential entry required for that role, including password input when the authentication scheme uses passwords.
 
-FR-INTERACTIVE-015A. Username input MAY be shown when the configured authentication scheme requires it.
+FR-INTERACTIVE-015A. Username input MAY be shown when the configured authentication scheme requires it. When the scheme does not require a username or equivalent identity field, the Home screen SHALL omit it.
 
 FR-INTERACTIVE-016. Switching roles from an active session SHALL require re-authentication for the selected role, consistent with §10.2.
 

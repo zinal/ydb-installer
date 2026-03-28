@@ -5,7 +5,7 @@ import { t } from '@/i18n';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
 
 export function MonitorPage() {
-  const { sessionId, session, isLoading: bootLoading, error: bootError } = useInstallationSession();
+  const { sessionId, isLoading: bootLoading, error: bootError } = useInstallationSession();
   const q = useQuery({
     queryKey: ['progress', sessionId],
     queryFn: () => api.getProgress(sessionId!),
@@ -26,9 +26,6 @@ export function MonitorPage() {
   return (
     <Flex direction="column" gap={4}>
       <Text variant="header-1">{t('monitor.title')}</Text>
-      <Text color="secondary">
-        {session?.title ?? t('home.sessionTitle')} · {session?.status ?? '…'}
-      </Text>
       {q.isLoading && <Loader size="l" />}
       {q.error && <Text color="danger">{(q.error as Error).message}</Text>}
       <Card style={{ padding: 16 }}>

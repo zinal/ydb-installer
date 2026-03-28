@@ -1,88 +1,112 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Loader, RadioGroup, Text, TextInput } from '@gravity-ui/uikit';
-import { Link as RouterLink } from 'react-router-dom';
+import { api } from '@/api/client';
 import { t } from '@/i18n';
+import { resolvePostLoginDestination } from '@/navigation/postLoginRouting';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
 import { useAuthPrototype, type PrototypeRole } from '@/session/AuthPrototypeProvider';
 
 export function HomePage() {
-  const { session, isLoading, error } = useInstallationSession();
+  const { session, sessionId, isLoading, error } = useInstallationSession();
   const { role, login } = useAuthPrototype();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState<PrototypeRole>('operator');
   const [password, setPassword] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+
+  const onSignIn = async () => {
+    if (!sessionId) return;
+    setLoginBusy(true);
+    try {
+      login(selectedRole, password);
+      const [sess, snap] = await Promise.all([
+        queryClient.fetchQuery({
+          queryKey: ['session', sessionId],
+          queryFn: () => api.getSession(sessionId),
+        }),
+        queryClient
+          .fetchQuery({
+            queryKey: ['discovery', sessionId],
+            queryFn: () => api.getDiscovery(sessionId),
+          })
+          .catch(() => undefined),
+      ]);
+      const dest = resolvePostLoginDestination(sess, snap);
+      navigate(dest, { replace: true });
+    } finally {
+      setLoginBusy(false);
+    }
+  };
 
   return (
-    <Flex direction="column" gap={4}>
-      <Text variant="header-1">{t('home.heading')}</Text>
-      <Text color="secondary">{t('home.description')}</Text>
+    <Flex direction="column" gap={5}>
+      <Text as="div" variant="header-1">
+        {t('home.heading')}
+      </Text>
+      <Text as="div" variant="body-2" color="complementary">
+        {t('home.description')}
+      </Text>
 
       {isLoading && <Loader size="l" />}
       {error && (
-        <Text color="danger">
+        <Text as="div" color="danger">
           {error.message} — start the Go server or use Vite proxy to /api.
         </Text>
       )}
 
       {!isLoading && !error && session && (
         <>
-          <Card style={{ padding: 16 }}>
-            <Text variant="subheader-2" style={{ marginBottom: 12 }}>
-              {t('auth.signIn')}
-            </Text>
-            <Text color="secondary" style={{ marginBottom: 12, fontSize: 13 }}>
-              {t('auth.signInHint')}
-            </Text>
-            <Flex direction="column" gap={3} style={{ maxWidth: 400 }}>
-              <RadioGroup
-                name="role"
-                options={[
-                  { value: 'operator', content: t('auth.roleOperator') },
-                  { value: 'observer', content: t('auth.roleObserver') },
-                ]}
-                value={selectedRole}
-                onUpdate={(v) => setSelectedRole(v as PrototypeRole)}
-              />
-              <TextInput
-                label={t('auth.username')}
-                placeholder={t('auth.usernameOptional')}
-                disabled
-              />
-              <TextInput
-                label={t('auth.password')}
-                type="password"
-                value={password}
-                onUpdate={setPassword}
-              />
-              <Button
-                view="action"
-                onClick={() => login(selectedRole, password)}
-              >
-                {t('auth.submit')}
-              </Button>
-            </Flex>
-            {role && (
-              <Text color="secondary" style={{ marginTop: 12 }}>
-                {t('auth.signedInAs')}{' '}
-                {role === 'operator' ? t('auth.roleOperator') : t('auth.roleObserver')}
-              </Text>
-            )}
-          </Card>
+          {!role ? (
+            <Card style={{ padding: 24 }}>
+              <Flex direction="column" gap={4}>
+                <Text as="div" variant="subheader-2" color="primary">
+                  {t('auth.signIn')}
+                </Text>
 
-          <Card style={{ padding: 16 }}>
-            <Flex direction="column" gap={3}>
-              <div>
-                <Text variant="subheader-2">{session.title ?? t('home.sessionTitle')}</Text>
-                <Text color="secondary">{session.status}</Text>
-              </div>
-              <Flex gap={3} wrap="wrap">
-                <RouterLink to="/configuration">{t('nav.configuration')}</RouterLink>
-                <Text color="secondary">·</Text>
-                <RouterLink to="/monitoring">{t('nav.monitoring')}</RouterLink>
-                <Text color="secondary">·</Text>
-                <RouterLink to="/logs">{t('nav.logs')}</RouterLink>
+                <Text as="div" variant="body-2" color="complementary">
+                  {t('auth.signInHint')}
+                </Text>
+
+                <Flex direction="column" gap={4} style={{ maxWidth: 440 }}>
+                  <RadioGroup
+                    size="l"
+                    name="role"
+                    options={[
+                      { value: 'operator', content: t('auth.roleOperator') },
+                      { value: 'observer', content: t('auth.roleObserver') },
+                    ]}
+                    value={selectedRole}
+                    onUpdate={(v) => setSelectedRole(v as PrototypeRole)}
+                  />
+                  <TextInput
+                    label={t('auth.password')}
+                    type="password"
+                    value={password}
+                    onUpdate={setPassword}
+                    size="l"
+                  />
+                  <Button view="action" size="l" loading={loginBusy} onClick={() => void onSignIn()}>
+                    {t('auth.submit')}
+                  </Button>
+                </Flex>
               </Flex>
-            </Flex>
-          </Card>
+            </Card>
+          ) : (
+            <Card style={{ padding: 24 }}>
+              <Flex direction="column" gap={3}>
+                <Text as="div" variant="body-2" color="complementary">
+                  {t('auth.signedInAs')}{' '}
+                  {role === 'operator' ? t('auth.roleOperator') : t('auth.roleObserver')}
+                </Text>
+                <Text as="div" variant="body-2" color="complementary">
+                  {t('home.useHeaderNav')}
+                </Text>
+              </Flex>
+            </Card>
+          )}
         </>
       )}
     </Flex>

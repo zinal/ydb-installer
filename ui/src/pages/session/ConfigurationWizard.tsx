@@ -1,8 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Button, Card, Flex, Loader, Stepper, Text } from '@gravity-ui/uikit';
 import { api, type TargetHost } from '@/api/client';
+import {
+  clampStructuralWizardStep,
+  DISCOVERY_ACK_STORAGE_KEY,
+  EXECUTION_STARTED_STORAGE_KEY,
+  WIZARD_STEP_STORAGE_KEY,
+} from '@/navigation/wizardStepStorage';
 import { t } from '@/i18n';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
 import { useAuthPrototype } from '@/session/AuthPrototypeProvider';
@@ -40,6 +47,9 @@ export function ConfigurationWizard() {
   const readOnly = role !== 'operator';
 
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialStepApplied = useRef(false);
+  const prevPersistedStep = useRef<number | null>(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<ConfigurationDraft>(() => initialConfigurationDraft());
   const [navHint, setNavHint] = useState<string | null>(null);
@@ -69,15 +79,71 @@ export function ConfigurationWizard() {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'targets' });
 
+  const session = sessionQuery.data;
+  const snapshot = discoveryQuery.data;
+
+  useEffect(() => {
+    initialStepApplied.current = false;
+    prevPersistedStep.current = null;
+  }, [sessionId]);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(DISCOVERY_ACK_STORAGE_KEY) === '1') {
+        patchDraft((d) => ({ ...d, discoveryAcknowledged: true }));
+      }
+      if (sessionStorage.getItem(EXECUTION_STARTED_STORAGE_KEY) === '1') {
+        patchDraft((d) => ({ ...d, executionStarted: true }));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [patchDraft]);
+
+  useEffect(() => {
+    if (!sessionId || !session) return;
+    if (discoveryQuery.isLoading) return;
+    if (initialStepApplied.current) return;
+    initialStepApplied.current = true;
+
+    const param = searchParams.get('step');
+    let desired: number;
+    if (param != null) {
+      const n = parseInt(param, 10);
+      desired = Number.isFinite(n) ? n : 0;
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('step');
+      setSearchParams(nextParams, { replace: true });
+    } else {
+      const raw = sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
+      desired = raw != null && Number.isFinite(parseInt(raw, 10)) ? parseInt(raw, 10) : 0;
+    }
+
+    const next = clampStructuralWizardStep(desired, session, snapshot);
+    setStepIndex(next);
+  }, [sessionId, session, snapshot, discoveryQuery.isLoading, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (prevPersistedStep.current === null) {
+      prevPersistedStep.current = stepIndex;
+      return;
+    }
+    if (prevPersistedStep.current === stepIndex) return;
+    prevPersistedStep.current = stepIndex;
+    try {
+      sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, String(stepIndex));
+    } catch {
+      /* ignore */
+    }
+  }, [sessionId, stepIndex]);
+
   useEffect(() => {
     const tgs = sessionQuery.data?.targets;
     if (tgs && tgs.length > 0) {
       reset({ targets: tgs.map(normalizeTarget) });
     }
   }, [sessionQuery.data, reset]);
-
-  const snapshot = discoveryQuery.data;
-  const session = sessionQuery.data;
 
   useEffect(() => {
     if (!snapshot?.hosts?.length) return;
@@ -102,6 +168,11 @@ export function ConfigurationWizard() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['session', sessionId] });
       qc.invalidateQueries({ queryKey: ['discovery', sessionId] });
+      try {
+        sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, '2');
+      } catch {
+        /* ignore */
+      }
       setStepIndex(2);
     },
   });
@@ -164,6 +235,12 @@ export function ConfigurationWizard() {
   }, []);
 
   const onStartExecution = useCallback(() => {
+    try {
+      sessionStorage.setItem(EXECUTION_STARTED_STORAGE_KEY, '1');
+      sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, '10');
+    } catch {
+      /* ignore */
+    }
     patchDraft((d) => ({ ...d, executionStarted: true }));
     setStepIndex(10);
   }, [patchDraft]);
@@ -243,7 +320,6 @@ export function ConfigurationWizard() {
     fields,
     append,
     remove,
-    control,
     session?.targets,
     draft,
     patchDraft,
@@ -267,11 +343,14 @@ export function ConfigurationWizard() {
 
   return (
     <Flex direction="column" gap={4}>
-      <Text variant="header-1">{t('wizard.title')}</Text>
-      <Text color="secondary">
-        {session?.title ?? t('home.sessionTitle')} · {session?.status ?? '…'}
-        {readOnly && ` · ${t('auth.readOnlyBadge')}`}
-      </Text>
+      <Flex direction="column" gap={2}>
+        <Text variant="header-1">{t('wizard.title')}</Text>
+        {readOnly && (
+          <Text variant="body-2" color="complementary">
+            {t('auth.readOnlyBadge')}
+          </Text>
+        )}
+      </Flex>
 
       <div className="wizard-stepper-scroll">
         <Stepper value={String(stepIndex)} onUpdate={(id) => trySetStep(Number(id))}>

@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { clearWizardUiState } from '@/navigation/wizardStepStorage';
 
 export type PrototypeRole = 'operator' | 'observer';
 
@@ -19,6 +20,7 @@ export function AuthPrototypeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    clearWizardUiState();
     setRole(null);
   }, []);
 
