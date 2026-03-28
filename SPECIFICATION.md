@@ -412,7 +412,7 @@ FR-INTERACTIVE-031. The operator MAY open Monitoring or Home while configuration
 
 FR-INTERACTIVE-031A. The step strip SHOULD reflect persisted progress when returning to `/configuration`.
 
-### 6.6 Configuration Step Form Definitions (Descriptions and Input Controls)
+### 6.6 Configuration Form Definitions (Descriptions and Input Controls)
 
 Each subsection describes **one configuration-step form**: its role in the workflow, the **primary input controls** (type and purpose), and **dependencies** on other steps or data. Control labels are illustrative. Localization and secret-handling requirements are defined by FR-I18N-001, FR-SECURITY-008, and FR-USABILITY-005.
 
@@ -428,12 +428,24 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Address | Text | Hostname or IP (FR-DISCOVERY-001). Required per row. |
 | SSH port | Number | TCP port; default 22. |
 | SSH user | Text | Login user for SSH. |
+| SSH password | Password Text | Password for SSH. |
+| SSH key | Upload button | Private key for SSH. |
 | Host id (optional) | Text | Stable identifier for the host in session configuration when distinct from address. |
 | Bastion host | Text | Jump host for bastion-based SSH, when used. |
 | Bastion user | Text | Account on the bastion. |
 | Add host / Remove row | Buttons | Maintain the list. |
 | Global or per-target authentication | Password fields, private-key selector or upload, “use SSH agent” toggle | Support password-based and key-based authentication, global defaults with optional per-host overrides (FR-DISCOVERY-002). Values MUST be handled as secrets. |
 | Save targets | Primary action | Persists targets to the session before discovery or later phases. |
+
+The form should contain two blocks:
+- default SSH access settings;
+- table with the targets.
+
+Both blocks should display a read-only format of the current settings, and contain buttons (for **Operator** access) to edit.
+
+The table's edit buttons should be Add, Remove and Edit, each allowing to provide the necessary settings.
+
+SSH access details for the particular target should allow to use the default settings, or to switch to custom settings, which must be entered in the latter case.
 
 #### 6.6.2 Step 2 — Discovery run (`discovery_run`)
 
