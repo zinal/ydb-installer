@@ -1,4 +1,4 @@
-/** Wizard sections aligned with FR-INTERACTIVE-005 (logical order). */
+/** Step ids align with §6.5 FR-INTERACTIVE-019 (stable product labels). */
 export const wizardSteps = [
   { id: 'targets', labelKey: 'wizard.step.targets' as const },
   { id: 'discovery_run', labelKey: 'wizard.step.discovery_run' as const },
@@ -10,4 +10,5 @@ export const wizardSteps = [
   { id: 'artifacts', labelKey: 'wizard.step.artifacts' as const },
   { id: 'database', labelKey: 'wizard.step.database' as const },
   { id: 'review', labelKey: 'wizard.step.review' as const },
+  { id: 'run_state', labelKey: 'wizard.step.run_state' as const },
 ] as const;
