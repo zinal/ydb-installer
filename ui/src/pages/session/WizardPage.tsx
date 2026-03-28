@@ -3,9 +3,9 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Loader, Text, TextInput } from '@gravity-ui/uikit';
 import { TreeView } from 'ydb-ui-components';
-import { useParams } from 'react-router-dom';
 import { api, TargetHost } from '@/api/client';
 import { t } from '@/i18n';
+import { useInstallationSession } from '@/session/InstallationSessionProvider';
 import { wizardSteps } from './wizardSteps';
 
 function formatBytes(n?: number): string {
@@ -23,20 +23,20 @@ function formatBytes(n?: number): string {
 type TargetsForm = { targets: TargetHost[] };
 
 export function WizardPage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId, isLoading: bootLoading, error: bootError } = useInstallationSession();
   const qc = useQueryClient();
   const [stepIndex, setStepIndex] = useState(0);
 
   const sessionQuery = useQuery({
     queryKey: ['session', sessionId],
     queryFn: () => api.getSession(sessionId!),
-    enabled: !!sessionId,
+    enabled: Boolean(sessionId),
   });
 
   const discoveryQuery = useQuery({
     queryKey: ['discovery', sessionId],
     queryFn: () => api.getDiscovery(sessionId!),
-    enabled: !!sessionId,
+    enabled: Boolean(sessionId),
   });
 
   const { register, control, handleSubmit, reset } = useForm<TargetsForm>({
@@ -98,11 +98,21 @@ export function WizardPage() {
   const discoveryPhase = session?.phases?.find((p) => p.phaseId === 2);
   const targetsSaved = (session?.targets?.length ?? 0) > 0;
 
+  if (!sessionId) {
+    return (
+      <Flex direction="column" gap={4}>
+        <Text variant="header-1">{t('wizard.title')}</Text>
+        {bootLoading && <Loader size="l" />}
+        {bootError && <Text color="danger">{bootError.message}</Text>}
+      </Flex>
+    );
+  }
+
   return (
     <Flex direction="column" gap={4}>
       <Text variant="header-1">{t('wizard.title')}</Text>
       <Text color="secondary">
-        Session {sessionId} · {session?.status ?? '…'}
+        {session?.title ?? t('home.sessionTitle')} · {session?.status ?? '…'}
       </Text>
 
       <Card style={{ padding: 16 }}>

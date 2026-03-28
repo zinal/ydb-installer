@@ -18,6 +18,8 @@ export function AppLayout() {
         <Text variant="header-1">{t('app.title')}</Text>
         <Flex gap={3}>
           <RouterLink to="/">{t('nav.home')}</RouterLink>
+          <RouterLink to="/wizard">{t('nav.wizard')}</RouterLink>
+          <RouterLink to="/monitor">{t('nav.monitor')}</RouterLink>
           <RouterLink to="/batch">{t('nav.batch')}</RouterLink>
         </Flex>
       </Flex>

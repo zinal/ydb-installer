@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
 import { Card, Flex, Loader, Text } from '@gravity-ui/uikit';
 import { api } from '@/api/client';
 import { t } from '@/i18n';
+import { useInstallationSession } from '@/session/InstallationSessionProvider';
 
 export function MonitorPage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
+  const { sessionId, session, isLoading: bootLoading, error: bootError } = useInstallationSession();
   const q = useQuery({
     queryKey: ['progress', sessionId],
     queryFn: () => api.getProgress(sessionId!),
@@ -13,10 +13,22 @@ export function MonitorPage() {
     refetchInterval: 5000,
   });
 
+  if (!sessionId) {
+    return (
+      <Flex direction="column" gap={4}>
+        <Text variant="header-1">{t('monitor.title')}</Text>
+        {bootLoading && <Loader size="l" />}
+        {bootError && <Text color="danger">{bootError.message}</Text>}
+      </Flex>
+    );
+  }
+
   return (
     <Flex direction="column" gap={4}>
       <Text variant="header-1">{t('monitor.title')}</Text>
-      <Text color="secondary">Session: {sessionId}</Text>
+      <Text color="secondary">
+        {session?.title ?? t('home.sessionTitle')} · {session?.status ?? '…'}
+      </Text>
       {q.isLoading && <Loader size="l" />}
       {q.error && <Text color="danger">{(q.error as Error).message}</Text>}
       <Card style={{ padding: 16 }}>
