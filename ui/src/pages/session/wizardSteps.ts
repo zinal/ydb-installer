@@ -1,8 +1,8 @@
 /** Wizard sections aligned with FR-INTERACTIVE-005 (logical order). */
 export const wizardSteps = [
   { id: 'targets', labelKey: 'wizard.step.targets' as const },
-  { id: 'auth', labelKey: 'wizard.step.auth' as const },
-  { id: 'discovery', labelKey: 'wizard.step.discovery' as const },
+  { id: 'discovery_run', labelKey: 'wizard.step.discovery_run' as const },
+  { id: 'discovery_results', labelKey: 'wizard.step.discovery_results' as const },
   { id: 'layout', labelKey: 'wizard.step.layout' as const },
   { id: 'storage', labelKey: 'wizard.step.storage' as const },
   { id: 'network', labelKey: 'wizard.step.network' as const },

@@ -49,6 +49,8 @@ type InstallationSession struct {
 	UpdatedAt time.Time        `json:"updatedAt"`
 	Phases    []SessionPhase   `json:"phases,omitempty"`
 	Current   *PhaseID         `json:"currentPhaseId,omitempty"`
+	// Targets are SSH endpoints for phase 1 (target definition); persisted for autosave (FR-INTERACTIVE-004).
+	Targets []TargetHost `json:"targets,omitempty"`
 }
 
 // NewSessionID generates a new session identifier.

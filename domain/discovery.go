@@ -18,6 +18,7 @@ type DiscoveredHost struct {
 	MemoryBytes    uint64             `json:"memoryBytes,omitempty"`
 	Interfaces     []NetworkInterface `json:"interfaces,omitempty"`
 	Disks          []DiscoveredDisk   `json:"disks,omitempty"`
+	TimeSyncHint   string             `json:"timeSyncHint,omitempty"`
 	DiscoveryError string             `json:"discoveryError,omitempty"`
 }
 

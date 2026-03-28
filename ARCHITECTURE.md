@@ -168,7 +168,29 @@ The cleanest package/module boundaries are:
 
 This keeps product concerns distinct from deployment-domain concerns and makes a later internal refactor of `ydbops` easier.
 
-## 6. Summary Recommendation
+## 6. Integration Test Architecture
+
+Integration tests should assume `Yandex Cloud` as the execution environment for infrastructure-backed scenarios.
+
+Recommended shape:
+
+- the test runner itself executes on a dedicated VM in `Yandex Cloud`;
+- that runner VM has working `YC CLI` authorization available before the test suite starts;
+- the runner VM is attached to the same default subnet as the VMs created for the test scenario;
+- the test harness may create and destroy additional VMs on demand through the `YC CLI`;
+- created VMs should be treated as disposable fixtures owned by the test run and cleaned up after completion.
+
+Under these assumptions, the integration-test flow can remain simple:
+
+1. the runner VM provisions the required fixture VMs with `yc`;
+2. the suite waits for network reachability and SSH availability on those VMs;
+3. the Installer and related test assets are deployed from the runner VM to the fixtures;
+4. the test cases execute discovery, validation, and installation flows against those fixtures;
+5. the suite collects logs and artifacts, then destroys the created VMs unless preservation is explicitly requested for debugging.
+
+This architecture keeps the test environment close to the target deployment model while avoiding a separate external control plane for orchestration.
+
+## 7. Summary Recommendation
 
 The recommended architecture is a self-contained, single-host control plane built around:
 
