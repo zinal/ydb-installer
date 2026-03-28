@@ -6,7 +6,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 UI_DIR="${ROOT}/ui"
 EMBED_DIR="${ROOT}/cmd/installer/web"
-OUT="${OUT:-ydb-installer}"
+OUT="${OUT:-bin/ydb-installer}"
 
 cd "${ROOT}"
 
