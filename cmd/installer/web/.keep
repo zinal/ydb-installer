@@ -1,0 +1,4 @@
+# Placeholder file to keep cmd/installer/web embeddable in source control.
+#
+# The production UI bundle is generated from ui/dist into this directory by
+# scripts/build-production.sh and is intentionally ignored by git.

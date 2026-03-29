@@ -4,5 +4,6 @@
 *.db
 node_modules/
 ui/dist/
-cmd/installer/web/assets/index-*
+cmd/installer/web/*
+!cmd/installer/web/.keep
 .DS_Store
