@@ -1,6 +1,15 @@
 import type { ConfigurationDraft } from './configurationDraft';
 import type { DiscoverySnapshot, InstallationSession } from '@/api/client';
 
+/** True when the session has persisted targets or the wizard form has at least one non-empty address. */
+export function hasCommittedOrDraftTargets(
+  session: InstallationSession | undefined,
+  formTargets: { address?: string }[] | undefined,
+): boolean {
+  if ((session?.targets?.length ?? 0) > 0) return true;
+  return (formTargets ?? []).some((r) => (r.address ?? '').trim().length > 0);
+}
+
 export function validateLayoutStep(d: ConfigurationDraft): string | null {
   if (!d.layout.preset.trim()) return 'layout.presetRequired';
   if (!d.layout.topology.trim()) return 'layout.topologyRequired';
@@ -90,8 +99,9 @@ export function canReachStep(
   session: InstallationSession | undefined,
   snapshot: DiscoverySnapshot | undefined,
   draft: ConfigurationDraft,
+  formTargets?: { address?: string }[],
 ): boolean {
-  const targetsSaved = (session?.targets?.length ?? 0) > 0;
+  const targetsSaved = hasCommittedOrDraftTargets(session, formTargets);
   const hasSnapshot = Boolean(snapshot?.collectedAt);
   const hostIds = snapshot?.hosts?.map((h) => h.hostId) ?? [];
 
