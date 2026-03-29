@@ -25,7 +25,7 @@ Authentication, REST API usage, and authorization rules follow **`SPECIFICATION.
 | Screen | Route (illustrative) | Purpose | Operator controls | Observer controls |
 |--------|----------------------|---------|-------------------|-------------------|
 | Home | `/` | Authentication and session-entry screen with role switch and credentials; after authentication, it shows the current session identity and entry points to workflow screens. | Authenticate as **Operator**; navigate to Configuration, Monitoring, and Logs; use actions permitted by role and mode. | Authenticate as **Observer**; navigate to Configuration, Monitoring, and Logs; read-only access only. |
-| Configuration | `/configuration` | Multi-step session workflow, including configuration, review, and run-state step 11. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
+| Configuration | `/configuration` | Multi-step session workflow, including configuration, review, and run-state step 10. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
 | Monitoring | `/monitoring` | Live or polled progress, phase and task detail, run state, and failure context. | Read run state; request cancel or resume through documented UI controls when the session state allows and the user is authorized. | Read run state only; no cancel, resume, or other execution-control actions. |
 | Logs | `/logs` | Session log view with filtering and historical browsing for installation logs. | Read logs; use filters; export or download logs where available. | Read logs with the same filtering and navigation in read-only form; no operator-only execution controls. |
 | Logout | `/logout` | Terminate access to the application. | End the authenticated session and return to the Home screen. | Same as for **Operator**. |
@@ -37,11 +37,11 @@ This mapping elaborates the relationship between the workflow phases in **`SPECI
 | Workflow phase | Primary UI step or view | Notes |
 |----------------|-------------------------|-------|
 | 1. target definition | Step 1 `targets` | Initial session target and access definition. |
-| 2. discovery | Step 2 `discovery_run` and step 3 `discovery_results` | Discovery execution and review of the resulting snapshot. |
-| 3. configuration input or import | Steps 4-9 in interactive mode; read-only projection of steps 1-10 in batch mode | Interactive mode captures configuration input; batch mode presents imported configuration. |
-| 4. preflight validation | Transition from step 9 into step 10 | Validation may be automatic or explicit per FR-INTERACTIVE-028A. |
-| 5. review and approval | Step 10 `review` | Destructive-scope approval and execution start gate. |
-| 6-13. execution through reporting | Step 11 `run_state`, `/monitoring`, and `/logs` | Execution-time interaction, confirmation prompts, run control, monitoring, logs, and final reporting. |
+| 2. discovery | Step 2 `discovery` | Discovery execution and review of the resulting snapshot on one screen. |
+| 3. configuration input or import | Steps 3–8 in interactive mode; read-only projection of steps 1–10 in batch mode | Interactive mode captures configuration input; batch mode presents imported configuration. |
+| 4. preflight validation | Transition from step 8 into step 9 | Validation may be automatic or explicit per FR-INTERACTIVE-028A. |
+| 5. review and approval | Step 9 `review` | Destructive-scope approval and execution start gate. |
+| 6-13. execution through reporting | Step 10 `run_state`, `/monitoring`, and `/logs` | Execution-time interaction, confirmation prompts, run control, monitoring, logs, and final reporting. |
 
 ---
 
@@ -54,16 +54,15 @@ The step identifiers and English labels referenced by **`SPECIFICATION.md`** §6
 | Step | Id | Label (English) |
 |------|-----|-----------------|
 | 1 | `targets` | Target definition |
-| 2 | `discovery_run` | Discovery |
-| 3 | `discovery_results` | Discovery results |
-| 4 | `layout` | Cluster layout |
-| 5 | `storage` | Disk selection |
-| 6 | `network` | Network & endpoints |
-| 7 | `security` | Security & TLS |
-| 8 | `artifacts` | Artifacts & version |
-| 9 | `database` | Database settings |
-| 10 | `review` | Review & approval |
-| 11 | `run_state` | Run state & confirmations |
+| 2 | `discovery` | Discovery |
+| 3 | `layout` | Cluster layout |
+| 4 | `storage` | Disk selection |
+| 5 | `network` | Network & endpoints |
+| 6 | `security` | Security & TLS |
+| 7 | `artifacts` | Artifacts & version |
+| 8 | `database` | Database settings |
+| 9 | `review` | Review & approval |
+| 10 | `run_state` | Run state & confirmations |
 
 ### 3.1 Form definitions (by configuration step)
 
@@ -95,9 +94,13 @@ Each subsection describes **one configuration-step form**: its role in the workf
 - Operator-assigned **host id** is not collected on this screen; stable host identifiers for discovery and later steps are assigned by the Installer/backend as needed. The `set targets` API payload from the UI need not include a host id field.
 - Multi-line read-only summaries for default and per-row SSH settings SHOULD align field order and labels (authentication mode, port, user, password/key status when relevant).
 
-#### 3.1.2 Step 2 — Discovery run (`discovery_run`)
+#### 3.1.2 Step 2 — Discovery (`discovery`)
 
-**Description.** Trigger remote discovery against saved targets and show run status (phase 2 in §4.1).
+**Description.** Trigger remote discovery against saved targets, show run status, and present the Discovery Snapshot (§5.2) for operator review on the **same** configuration step before cluster design (phase 2 in §4.1; FR-INTERACTIVE-025A).
+
+**Presentation notes.**
+
+- A short explanatory phrase describing discovery (for example that it connects over SSH and collects inventory) SHOULD appear **below** the step strip (breadcrumb), not overlapping the step heading or primary card title.
 
 **Input controls.**
 
@@ -106,20 +109,11 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Run discovery | Button | Starts discovery; disabled until targets are saved. |
 | Refresh discovery | Button | Re-runs discovery to update the Discovery Snapshot (FR-DISCOVERY-006). |
 | Progress / error display | Text, progress indicator | Shows running state and per-session errors without leaking secrets. |
-
-#### 3.1.3 Step 3 — Discovery results (`discovery_results`)
-
-**Description.** Read-only presentation of the Discovery Snapshot (§5.2) for operator review before cluster design.
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Host inventory table or cards | Read-only grid | Hostname, FQDN, OS, hardware summary, disk inventory columns, per-host discovery errors (FR-DISCOVERY-003, FR-DISCOVERY-007). |
+| Host inventory table or cards | Read-only grid | **Host** column: operator-entered target address from target definition and the resolved hostname or FQDN identified during discovery; when the two differ, show both on separate lines; when they are the same, a single line is sufficient. Other columns: OS, hardware summary, disk inventory, **Discovery status** (FR-DISCOVERY-003, FR-DISCOVERY-007). The status column SHALL show an explicit success indicator (for example **OK**) when discovery completed without a per-host error; otherwise it SHALL show the error text. |
 | Acknowledge discovery results | Checkbox or equivalent explicit action | Records the acknowledgment required by FR-INTERACTIVE-026A before the operator leaves this step. |
-| Continue to cluster layout | Primary action | Moves to layout only after the acknowledgment requirement is satisfied; the UI can warn if critical hosts failed discovery. |
+| Continue to cluster layout | Wizard **Next** (or equivalent primary navigation) | Moves to layout only after the acknowledgment requirement is satisfied; the UI can warn if critical hosts failed discovery. |
 
-#### 3.1.4 Step 4 — Cluster layout (`layout`)
+#### 3.1.3 Step 3 — Cluster layout (`layout`)
 
 **Description.** Define base storage topology, optional bridge mode and piles, node roles, and placement (§8, FR-LAYOUT-001–FR-LAYOUT-017, FR-INTERACTIVE-007).
 
@@ -135,7 +129,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Compute nodes per host | Number (where allowed) | FR-LAYOUT-009. |
 | Location attributes | Text or select per host | Rack, data center, availability zone, pile membership (FR-LAYOUT-007). |
 
-#### 3.1.5 Step 5 — Disk selection (`storage`)
+#### 3.1.4 Step 4 — Disk selection (`storage`)
 
 **Description.** Map discovered disks to YDB storage, partitioning, labels, and media grouping (§9, FR-STORAGE-001–FR-STORAGE-008).
 
@@ -149,7 +143,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Disk type / kind / label pattern | Fields per group | FR-STORAGE-005–FR-STORAGE-008. |
 | Safety summaries | Read-only callouts | Warnings for mounted, system, or in-use disks (FR-STORAGE-009–FR-STORAGE-011). |
 
-#### 3.1.6 Step 6 — Network & endpoints (`network`)
+#### 3.1.5 Step 5 — Network & endpoints (`network`)
 
 **Description.** Client-facing and intra-cluster network settings, including separated front-end and back-end models (§8.3, FR-LAYOUT-011–FR-LAYOUT-013).
 
@@ -162,7 +156,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Back-end FQDN / internal addresses | Text | Intra-cluster communication (FR-LAYOUT-013). |
 | Additional listeners / ports | Text or number | As required by selected layout and validation. |
 
-#### 3.1.7 Step 7 — Security & TLS (`security`)
+#### 3.1.6 Step 6 — Security & TLS (`security`)
 
 **Description.** TLS materials, Installer-facing HTTPS options where relevant, and YDB authentication settings (§10).
 
@@ -175,7 +169,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Certificate generation parameters | Form fields | Validity, SANs, CA settings as supported (FR-SECURITY-003). |
 | YDB authentication | Toggles and credential capture | FR-SECURITY-006, FR-SECURITY-007; secrets masked. Credentials captured here are for YDB cluster bootstrap (not Installer UI/REST authentication). |
 
-#### 3.1.8 Step 8 — Artifacts & version (`artifacts`)
+#### 3.1.7 Step 7 — Artifacts & version (`artifacts`)
 
 **Description.** YDB version, configuration generation, and artifact source (§11, FR-ARTIFACT-001–FR-ARTIFACT-005).
 
@@ -188,7 +182,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Local path fields | Text | Paths on the control host for archives or binaries. |
 | Offline / mirror URL | Text | When used instead of public download in restricted environments. |
 
-#### 3.1.9 Step 9 — Database settings (`database`)
+#### 3.1.8 Step 8 — Database settings (`database`)
 
 **Description.** Initial database creation parameters used before compute nodes start (§13.4, FR-EXECUTION-009).
 
@@ -200,7 +194,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Domain / root paths | Text | As required by YDB deployment model. |
 | Additional DB options | Fields | Charset, pools, or other documented first-run settings exposed by the Installer. |
 
-#### 3.1.10 Step 10 — Review & approval (`review`)
+#### 3.1.9 Step 9 — Review & approval (`review`)
 
 **Description.** Consolidated read-only summary of effective configuration, latest preflight-validation outcome captured before review, destructive-scope confirmation, and execution start (§12, §9.2).
 
@@ -210,11 +204,11 @@ Each subsection describes **one configuration-step form**: its role in the workf
 |---------|------|-----------|
 | Configuration summary | Read-only sections | Hosts, topology, disks, security, artifacts. |
 | Validation results | Read-only panel | Shows latest preflight result summary with blocking, warning, and informational classifications (FR-VALIDATION-003). |
-| Run preflight / refresh validation | Button or automatic transition trigger | Invokes the preflight required before entry to review when the UI does not trigger it automatically on leaving step 9. |
+| Run preflight / refresh validation | Button or automatic transition trigger | Invokes the preflight required before entry to review when the UI does not trigger it automatically on leaving step 8. |
 | Approve destructive actions | Checkbox or typed confirmation | Identifies affected hosts and disks (FR-STORAGE-012). |
 | Start installation / Proceed | Primary button | Available only when blocking errors are cleared and required destructive confirmations are completed. |
 
-#### 3.1.11 Step 11 — Run state & confirmations (`run_state`)
+#### 3.1.10 Step 10 — Run state & confirmations (`run_state`)
 
 **Description.** Execution-time configuration-step screen that shows current session state, highlights pending confirmation requests that gate progress, and provides quick navigation to monitoring and logs views. For **Operator**, this step allows submission of confirmation responses where required. For **Observer**, this step is read-only.
 
@@ -265,7 +259,7 @@ Section references such as §6.5, §5, §8, §9, §10, §11, §12, or §13 in th
 | Filter by host / phase / severity / time range | Selectors and inputs | Narrows visible log entries for troubleshooting (FR-UI-006). |
 | Auto-follow toggle | Toggle | Keeps view pinned to newest entries while enabled. |
 | Download or export logs | Link or button | Exports logs for reporting and troubleshooting (FR-REPORTING-002, FR-REPORTING-006). |
-| Back to run state or monitor | Link or button | Returns to `/configuration` step 11 or `/monitoring` without losing session context. |
+| Back to run state or monitor | Link or button | Returns to `/configuration` step 10 or `/monitoring` without losing session context. |
 
 These views implement FR-MONITORING-001–FR-MONITORING-003, FR-MONITORING-005, FR-RUNCONTROL-001, FR-RUNCONTROL-008, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as cited in the tables, together with **SPECIFICATION.md** §6.8.
 

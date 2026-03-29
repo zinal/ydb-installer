@@ -3,6 +3,7 @@ package testdiscovery
 
 import (
 	"context"
+	"strings"
 
 	"github.com/ydb-platform/ydb-installer/internal/discovery"
 	"github.com/ydb-platform/ydb-installer/internal/domain"
@@ -24,8 +25,9 @@ func Successful() *Stub {
 	return &Stub{
 		ProbeHostFn: func(_ context.Context, target domain.TargetHost) (*domain.DiscoveredHost, error) {
 			return &domain.DiscoveredHost{
-				HostID:   "host-" + target.Address,
-				Hostname: target.Address,
+				HostID:        "host-" + target.Address,
+				TargetAddress: strings.TrimSpace(target.Address),
+				Hostname:      target.Address,
 				OSName:   "Linux",
 				CPUs:     4,
 				Disks: []domain.DiscoveredDisk{
@@ -45,6 +47,7 @@ func AllFailing() *Stub {
 			for i, t := range targets {
 				hosts[i] = domain.DiscoveredHost{
 					HostID:         "host-" + t.Address,
+					TargetAddress:  strings.TrimSpace(t.Address),
 					Hostname:       t.Address,
 					DiscoveryError: "connection refused",
 				}
@@ -58,7 +61,11 @@ func (s *Stub) ProbeHost(ctx context.Context, target domain.TargetHost) (*domain
 	if s.ProbeHostFn != nil {
 		return s.ProbeHostFn(ctx, target)
 	}
-	return &domain.DiscoveredHost{HostID: "host-" + target.Address, Hostname: target.Address}, nil
+	return &domain.DiscoveredHost{
+		HostID:        "host-" + target.Address,
+		TargetAddress: strings.TrimSpace(target.Address),
+		Hostname:      target.Address,
+	}, nil
 }
 
 func (s *Stub) ProbeAll(ctx context.Context, targets []domain.TargetHost) ([]domain.DiscoveredHost, error) {

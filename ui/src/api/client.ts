@@ -61,6 +61,8 @@ export interface DiscoveredDisk {
 export interface DiscoveredHost {
   hostId: string;
   hostname: string;
+  /** Operator-entered target address from session (aligned with discovery order). */
+  targetAddress?: string;
   fqdn?: string;
   osName?: string;
   osVersion?: string;

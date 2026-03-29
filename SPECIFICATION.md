@@ -362,7 +362,7 @@ FR-INTERACTIVE-021A. The step strip SHALL distinguish completed or satisfied ste
 
 Stable step identifiers and English labels appear in **SPECIFICATION_UI.md** §3.
 
-FR-INTERACTIVE-022. The default forward path SHALL advance in order as **1 → 2 → 3 → 4 → ... → 10 → 11**.
+FR-INTERACTIVE-022. The default forward path SHALL advance in order as **1 → 2 → 3 → 4 → … → 9 → 10** (ten numbered configuration steps in total).
 
 FR-INTERACTIVE-023. Back from any step SHALL return to the immediately previous step without discarding saved draft data unless the operator explicitly discards a session.
 
@@ -372,27 +372,27 @@ FR-INTERACTIVE-024A. The UI SHOULD require an explicit commit of target edits be
 
 FR-INTERACTIVE-025. Running discovery SHALL require saved targets.
 
-FR-INTERACTIVE-025A. Advancing from step 2 to step 3 after a successful discovery run SHOULD be automatic or one-click.
+FR-INTERACTIVE-025A. Discovery execution and presentation of the Discovery Snapshot for review SHOULD occur on the same configuration step (step 2) so that the operator is not required to advance to a separate step solely to view inventory results after a successful run.
 
-FR-INTERACTIVE-025B. The operator MAY open step 3 when a discovery snapshot already exists, for example after a refresh.
+FR-INTERACTIVE-025B. The operator MAY open step 2 when a discovery snapshot already exists, for example after a refresh.
 
-FR-INTERACTIVE-026. Transition from step 3 to step 4 SHALL be allowed once a discovery snapshot is available for review, even if some hosts failed discovery as allowed by FR-DISCOVERY-004.
+FR-INTERACTIVE-026. Transition from step 2 to step 3 SHALL be allowed once a discovery snapshot is available for review, even if some hosts failed discovery as allowed by FR-DISCOVERY-004.
 
-FR-INTERACTIVE-026A. The operator SHALL acknowledge discovery results before proceeding from step 3 to step 4 through an explicit acknowledgment control or an equivalent explicit continue action that records the acknowledgment.
+FR-INTERACTIVE-026A. The operator SHALL acknowledge discovery results before proceeding from step 2 to step 3 through an explicit acknowledgment control or an equivalent explicit continue action that records the acknowledgment.
 
-FR-INTERACTIVE-027. Forward navigation through steps 4 to 9 SHALL run step validation before leaving a step that has required fields (FR-INTERACTIVE-006).
+FR-INTERACTIVE-027. Forward navigation through steps 3 to 8 SHALL run step validation before leaving a step that has required fields (FR-INTERACTIVE-006).
 
-FR-INTERACTIVE-028. Entering Review & approval at step 10 SHALL require completion of preflight validation with no blocking errors (FR-VALIDATION-001, FR-VALIDATION-008).
+FR-INTERACTIVE-028. Entering Review & approval at step 9 SHALL require completion of preflight validation with no blocking errors (FR-VALIDATION-001, FR-VALIDATION-008).
 
-FR-INTERACTIVE-028A. The UI MAY trigger the required preflight validation automatically when leaving step 9 or through an equivalent explicit pre-review action.
+FR-INTERACTIVE-028A. The UI MAY trigger the required preflight validation automatically when leaving step 8 or through an equivalent explicit pre-review action.
 
-FR-INTERACTIVE-029. Starting execution from step 10 SHALL require explicit approval for destructive scope (§9.2, FR-STORAGE-011).
+FR-INTERACTIVE-029. Starting execution from step 9 SHALL require explicit approval for destructive scope (§9.2, FR-STORAGE-011).
 
-FR-INTERACTIVE-029A. After execution starts, the UI SHALL transition to step 11 to show current run state and any confirmation requests that gate progress.
+FR-INTERACTIVE-029A. After execution starts, the UI SHALL transition to step 10 to show current run state and any confirmation requests that gate progress.
 
-FR-INTERACTIVE-030. The operator MAY switch to Monitoring or Logs while on step 11 at any time.
+FR-INTERACTIVE-030. The operator MAY switch to Monitoring or Logs while on step 10 at any time.
 
-FR-INTERACTIVE-030A. Returning to step 11 SHALL preserve the latest run-state and confirmation-request context.
+FR-INTERACTIVE-030A. Returning to step 10 SHALL preserve the latest run-state and confirmation-request context.
 
 FR-INTERACTIVE-031. The operator MAY open Monitoring or Home while configuration is incomplete.
 
@@ -755,7 +755,7 @@ FR-MONITORING-004. The Installer SHALL retain historical logs and status transit
 
 FR-MONITORING-005. The Installer SHALL provide a dedicated logs screen that shows installation logs for the active session, supports filtering by host, phase, severity, and time range, and remains available for historical review after run completion.
 
-FR-MONITORING-006. The Installer SHALL provide a read-only run-state-and-confirmations view to **Observer** identities that corresponds to configuration step 11 (`run_state`) and exposes current run state and confirmation-request status without allowing submission of confirmation responses.
+FR-MONITORING-006. The Installer SHALL provide a read-only run-state-and-confirmations view to **Observer** identities that corresponds to configuration step 10 (`run_state`) and exposes current run state and confirmation-request status without allowing submission of confirmation responses.
 
 ## 15. Cancellation, Failure Handling, and Resume
 
