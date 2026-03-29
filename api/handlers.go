@@ -48,9 +48,7 @@ func createSession(d Deps) http.HandlerFunc {
 			writeAPIError(w, domain.ErrValidation)
 			return
 		}
-		if b.Mode == "" {
-			b.Mode = domain.ModeInteractive
-		}
+		b.Mode = d.Mode
 		sess, err := d.Sessions.Create(r.Context(), b.Mode, b.Title)
 		if err != nil {
 			writeAPIError(w, err)
@@ -460,5 +458,14 @@ func getReference(d Deps) http.HandlerFunc {
 			return
 		}
 		writeJSON(w, http.StatusOK, v)
+	}
+}
+
+func getRuntime(d Deps) http.HandlerFunc {
+	type runtimeResponse struct {
+		Mode domain.InstallationMode `json:"mode"`
+	}
+	return func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, runtimeResponse{Mode: d.Mode})
 	}
 }

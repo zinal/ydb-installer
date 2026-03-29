@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api, type InstallationSession } from '@/api/client';
+import { useAuthSession } from './AuthSessionProvider';
 
 type InstallationSessionValue = {
   sessionId: string | undefined;
@@ -12,10 +13,11 @@ type InstallationSessionValue = {
 const InstallationSessionContext = createContext<InstallationSessionValue | null>(null);
 
 /**
- * Ensures exactly one interactive installation session for this control host:
+ * Ensures exactly one installation session for this control host:
  * reuses the most recently updated session if any exist, otherwise creates one.
  */
 export function InstallationSessionProvider({ children }: { children: ReactNode }) {
+  const { identity } = useAuthSession();
   const q = useQuery({
     queryKey: ['installation-session'],
     queryFn: async () => {
@@ -23,8 +25,9 @@ export function InstallationSessionProvider({ children }: { children: ReactNode 
       if (list.length > 0) {
         return list[0];
       }
-      return api.createSession({ mode: 'interactive', title: 'Interactive install' });
+      return api.createSession({ mode: identity?.mode ?? 'interactive', title: 'Interactive install' });
     },
+    enabled: Boolean(identity),
   });
 
   const value: InstallationSessionValue = {
