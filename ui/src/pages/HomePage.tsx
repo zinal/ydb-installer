@@ -1,11 +1,24 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Loader, RadioGroup, Text, TextInput } from '@gravity-ui/uikit';
 import { api } from '@/api/client';
 import { t } from '@/i18n';
 import { resolvePostLoginDestination } from '@/navigation/postLoginRouting';
+import {
+  currentPhaseFromSession,
+  phaseLabel,
+  phaseStateLabel,
+  sessionStatusLabel,
+  workDestinationNavLabel,
+} from '@/pages/homeInstallationStatus';
 import { useAuthSession } from '@/session/AuthSessionProvider';
+import {
+  INSTALLATION_SESSION_QUERY_KEY,
+  installationSessionQueryOptions,
+} from '@/session/installationSessionQuery';
+
+const DISCOVERY_POLL_MS = 5000;
 
 export function HomePage() {
   const { role, login, identity } = useAuthSession();
@@ -35,7 +48,7 @@ export function HomePage() {
           })
           .catch(() => undefined),
       ]);
-      await queryClient.invalidateQueries({ queryKey: ['installation-session'] });
+      await queryClient.invalidateQueries({ queryKey: INSTALLATION_SESSION_QUERY_KEY });
       await queryClient.invalidateQueries({ queryKey: ['session', currentSession.id] });
       const dest = resolvePostLoginDestination(sessionForDestination, snap);
       const requested = searchParams.get('next');
@@ -47,13 +60,32 @@ export function HomePage() {
     }
   };
 
+  const sessionQuery = useQuery(installationSessionQueryOptions(identity));
+  const session = sessionQuery.data;
+  const sessionId = session?.id;
+
+  const discoveryQuery = useQuery({
+    queryKey: ['discovery', sessionId],
+    queryFn: () => api.getDiscovery(sessionId!),
+    enabled: Boolean(identity && sessionId),
+    refetchInterval: identity && sessionId ? DISCOVERY_POLL_MS : false,
+  });
+
+  const workPath = useMemo(() => {
+    if (!session) return '/configuration';
+    return resolvePostLoginDestination(session, discoveryQuery.data);
+  }, [session, discoveryQuery.data]);
+
+  const currentPhase = currentPhaseFromSession(session);
+  const primaryNavLabel = workDestinationNavLabel(workPath, t);
+
   return (
     <Flex direction="column" gap={5}>
       <Text as="div" variant="header-1">
-        {t('home.heading')}
+        {identity ? t('home.signedInHeading') : t('home.heading')}
       </Text>
       <Text as="div" variant="body-2" color="complementary">
-        {t('home.description')}
+        {identity ? t('home.signedInDescription') : t('home.description')}
       </Text>
 
       {loginBusy && <Loader size="l" />}
@@ -100,7 +132,7 @@ export function HomePage() {
         </Card>
       ) : (
         <Card style={{ padding: 24 }}>
-          <Flex direction="column" gap={3}>
+          <Flex direction="column" gap={4}>
             <Text as="div" variant="body-2" color="complementary">
               {t('auth.signedInAs')}{' '}
               {role === 'operator'
@@ -109,9 +141,50 @@ export function HomePage() {
                   ? t('auth.roleObserver')
                   : identity.username}
             </Text>
-            <Text as="div" variant="body-2" color="complementary">
-              {t('home.useHeaderNav')}
-            </Text>
+
+            {sessionQuery.isLoading && !session ? (
+              <Loader size="m" />
+            ) : sessionQuery.error ? (
+              <Text as="div" color="danger">
+                {(sessionQuery.error as Error).message}
+              </Text>
+            ) : session ? (
+              <>
+                <Text as="div" variant="subheader-2">
+                  {t('home.installationState')}
+                </Text>
+                <Flex direction="column" gap={2}>
+                  <Text as="div" variant="body-2">
+                    <Text as="span" color="secondary">
+                      {t('home.sessionTitleLabel')}{' '}
+                    </Text>
+                    {session.title?.trim() || t('home.sessionTitle')}
+                  </Text>
+                  <Text as="div" variant="body-2">
+                    <Text as="span" color="secondary">
+                      {t('home.statusLabel')}{' '}
+                    </Text>
+                    {sessionStatusLabel(session.status, t)}
+                    {sessionQuery.isFetching ? ` ${t('home.stateRefreshing')}` : ''}
+                  </Text>
+                  {currentPhase ? (
+                    <Text as="div" variant="body-2">
+                      <Text as="span" color="secondary">
+                        {t('home.currentPhase')}{' '}
+                      </Text>
+                      {phaseLabel(currentPhase, t)}
+                      <Text as="span" color="secondary">
+                        {' '}
+                        ({phaseStateLabel(currentPhase.state, t)})
+                      </Text>
+                    </Text>
+                  ) : null}
+                </Flex>
+                <Button view="action" size="l" component={Link} to={workPath}>
+                  {t('home.continueTo')} {primaryNavLabel}
+                </Button>
+              </>
+            ) : null}
           </Flex>
         </Card>
       )}
