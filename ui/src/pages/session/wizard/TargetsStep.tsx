@@ -351,7 +351,7 @@ export function TargetsStep({
                   const row = targets[idx];
                   const mode = authModeForRow(field.id);
                   const lines = row
-                    ? rowSshSummaryLines(row, mode, draft, t)
+                    ? rowSshSummaryLines(row, mode, t)
                     : defaultSshSummaryLines(draft, t);
                   return (
                     <tr key={field.id}>

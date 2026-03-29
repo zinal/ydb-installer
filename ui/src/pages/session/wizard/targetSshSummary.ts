@@ -59,32 +59,14 @@ export function defaultSshSummaryLines(draft: ConfigurationDraft, t: TFn): strin
   return lines;
 }
 
-/** Multi-line strings for a target row (matches default block field order and labels). */
+/** Multi-line strings for a target row (matches default block field order and labels for overrides). */
 export function rowSshSummaryLines(
   row: TargetFormRow,
   rowMode: TargetRowAuthMode,
-  draft: ConfigurationDraft,
   t: TFn,
 ): string[] {
   if (rowMode === 'default') {
-    const def = draft.defaultSsh;
-    const lines: string[] = [
-      `${t('wizard.targets.defaultAuthModeLabel')}: ${rowAuthModeLabel('default', t)}`,
-      `${t('wizard.targets.followingDefaultAuth')}: ${defaultAuthModeLabel(def.authMode, t)}`,
-      `${t('wizard.field.sshPort')}: ${def.port}`,
-      `${t('wizard.field.sshUser')}: ${formatSshUserDisplay(row.user, t)}`,
-    ];
-    if (def.authMode === 'password') {
-      lines.push(
-        `${t('wizard.field.sshPassword')}: ${def.passwordSet ? t('wizard.targets.passwordSet') : t('wizard.targets.passwordNotSet')}`,
-      );
-    }
-    if (def.authMode === 'secret_key') {
-      lines.push(
-        `${t('wizard.targets.uploadKey')}: ${def.keySelected ? t('wizard.targets.keySelected') : t('wizard.targets.keyNotSelected')}`,
-      );
-    }
-    return lines;
+    return [t('wizard.targets.usingDefaultSshSettings')];
   }
 
   const port = row.sshPort > 0 ? row.sshPort : 22;
