@@ -6,7 +6,7 @@ alwaysApply: false
 
 # UI Frontend Rules
 
-For UI work, follow `AGENTS.md`, `SPECIFICATION.md`, and `ARCHITECTURE.md`.
+For UI work, follow `AGENTS.md`, `SPECIFICATION.md`, `SPECIFICATION_UI.md`, and `ARCHITECTURE.md`.
 
 - Keep the UI in `React` and `TypeScript`.
 - Use `ydb-ui-components` as the primary component library and align usage patterns with `ydb-platform/ydb-embedded-ui`.

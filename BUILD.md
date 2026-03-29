@@ -1,6 +1,6 @@
 # Building the YDB Installer
 
-This document describes how to build the Installer binary and web UI. Product behavior is defined in `SPECIFICATION.md`; layout and stack are summarized in `ARCHITECTURE.md`.
+This document describes how to build the Installer binary and web UI. Product behavior is defined in `SPECIFICATION.md` and `SPECIFICATION_UI.md`; layout and stack are summarized in `ARCHITECTURE.md`.
 
 ## Prerequisites
 

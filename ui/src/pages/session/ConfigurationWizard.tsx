@@ -8,7 +8,9 @@ import {
   clampStructuralWizardStep,
   DISCOVERY_ACK_STORAGE_KEY,
   EXECUTION_STARTED_STORAGE_KEY,
+  readWizardMaxReached,
   WIZARD_STEP_STORAGE_KEY,
+  writeWizardMaxReached,
 } from '@/navigation/wizardStepStorage';
 import { t } from '@/i18n';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
@@ -28,10 +30,14 @@ import { DatabaseStep } from './wizard/DatabaseStep';
 import { ReviewStep } from './wizard/ReviewStep';
 import { RunStateStep } from './wizard/RunStateStep';
 import type { TargetFormRow, TargetsForm } from './wizard/targetForm';
-import { formatAddressForForm, parseHostPort } from './wizard/parseHostPort';
+import { parseHostPort } from './wizard/parseHostPort';
+
 function normalizeTarget(t: TargetHost): TargetFormRow {
+  const parsed = parseHostPort(t.address ?? '');
+  const port = t.port && t.port > 0 ? t.port : parsed.explicitPort ? parsed.port : 22;
   return {
-    address: formatAddressForForm(t),
+    address: parsed.host.trim(),
+    sshPort: port,
     user: t.user ?? '',
     sshPassword: undefined,
     sshKeySelected: false,
@@ -50,6 +56,9 @@ export function ConfigurationWizard() {
   const prevPersistedStep = useRef<number | null>(null);
   /** Avoids re-inferring SSH auth mode on every render; keyed to loaded session targets. */
   const inferredTargetAuthSig = useRef<string | null>(null);
+  const prevSessionIdRef = useRef<string | null>(null);
+  /** After a real session id change, skip one persist so we do not write stale max under the new id. */
+  const skipNextMaxPersistRef = useRef(false);
   const [stepIndex, setStepIndex] = useState(0);
   /** Furthest step index the operator has reached (for Stepper success markers). */
   const [maxReachedStep, setMaxReachedStep] = useState(0);
@@ -76,7 +85,9 @@ export function ConfigurationWizard() {
   });
 
   const { register, control, handleSubmit, reset, setValue } = useForm<TargetsForm>({
-    defaultValues: { targets: [{ address: '', user: '', sshPassword: '', sshKeySelected: false }] },
+    defaultValues: {
+      targets: [{ address: '', sshPort: 22, user: '', sshPassword: '', sshKeySelected: false }],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'targets' });
@@ -88,7 +99,33 @@ export function ConfigurationWizard() {
     setWizardStepReady(false);
     prevPersistedStep.current = null;
     inferredTargetAuthSig.current = null;
+    if (sessionId != null) {
+      if (prevSessionIdRef.current !== null && prevSessionIdRef.current !== sessionId) {
+        setMaxReachedStep(0);
+        skipNextMaxPersistRef.current = true;
+      }
+      prevSessionIdRef.current = sessionId;
+    } else {
+      prevSessionIdRef.current = null;
+    }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    const stored = readWizardMaxReached(sessionId);
+    if (stored > 0) {
+      setMaxReachedStep((m) => Math.max(m, stored));
+    }
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    if (skipNextMaxPersistRef.current) {
+      skipNextMaxPersistRef.current = false;
+      return;
+    }
+    writeWizardMaxReached(sessionId, maxReachedStep);
+  }, [sessionId, maxReachedStep]);
 
   useEffect(() => {
     setMaxReachedStep((m) => Math.max(m, stepIndex));
@@ -128,6 +165,7 @@ export function ConfigurationWizard() {
 
     const next = clampStructuralWizardStep(desired, session, snapshot);
     setStepIndex(next);
+    setMaxReachedStep((m) => Math.max(m, next));
     setWizardStepReady(true);
   }, [sessionId, session, snapshot, discoveryQuery.isLoading, wizardStepReady, searchParams]);
 
@@ -186,13 +224,11 @@ export function ConfigurationWizard() {
       const next = { ...d.targetAuthModeByFieldId };
       fields.forEach((f, i) => {
         const row = tgs[i]!;
-        const formatted = formatAddressForForm(row);
-        const { port: p, explicitPort } = parseHostPort(formatted);
+        const port = row.port && row.port > 0 ? row.port : 22;
         const user = (row.user ?? '').trim();
         const defPort = d.defaultSsh.port;
         const defUser = d.defaultSsh.user.trim();
-        const effectivePort = explicitPort ? p : defPort;
-        next[f.id] = effectivePort === defPort && user === defUser ? 'default' : 'password';
+        next[f.id] = port === defPort && user === defUser ? 'default' : 'password';
       });
       return { ...d, targetAuthModeByFieldId: next };
     });
@@ -241,17 +277,26 @@ export function ConfigurationWizard() {
   const onSaveTargets = handleSubmit((data) => {
     const cleaned: TargetHost[] = [];
     data.targets.forEach((row, idx) => {
-      const { host, port: parsedPort, explicitPort } = parseHostPort(row.address);
-      const port = explicitPort ? parsedPort : draft.defaultSsh.port;
-      const trimmedHost = host.trim();
+      const fid = fields[idx]?.id;
+      const raw = fid ? draft.targetAuthModeByFieldId[fid] : undefined;
+      const mode =
+        raw === 'password' || raw === 'secret_key' || raw === 'agent' || raw === 'default'
+          ? raw
+          : 'default';
+      const trimmedHost = row.address.trim();
       if (!trimmedHost.length) {
         return;
       }
+      const port =
+        mode === 'default'
+          ? draft.defaultSsh.port
+          : row.sshPort > 0
+            ? row.sshPort
+            : 22;
       cleaned.push({
         address: trimmedHost,
         port,
         user: row.user?.trim() || undefined,
-        hostId: String(idx + 1),
       });
     });
     if (cleaned.length === 0) {
@@ -321,6 +366,7 @@ export function ConfigurationWizard() {
             draft={draft}
             patchDraft={patchDraft}
             readOnly={readOnly}
+            onCommitTargets={readOnly ? () => {} : onSaveTargets}
           />
         );
       case 1:
@@ -389,6 +435,7 @@ export function ConfigurationWizard() {
     runDiscovery,
     refreshDiscovery,
     onStartExecution,
+    onSaveTargets,
   ]);
 
   if (!sessionId) {
@@ -415,7 +462,9 @@ export function ConfigurationWizard() {
       <div className="wizard-stepper-scroll">
         <Stepper value={String(stepIndex)} onUpdate={(id) => trySetStep(Number(id))}>
           {wizardSteps.map((step, i) => {
-            const completed = i !== stepIndex && i < maxReachedStep;
+            /* Success = strictly before furthest reached step. Current step keeps success when
+               revisiting an earlier configured step (read-only); only steps at the frontier stay idle. */
+            const completed = i < maxReachedStep;
             return (
               <Stepper.Item
                 key={step.id}
@@ -452,11 +501,6 @@ export function ConfigurationWizard() {
         {stepIndex < wizardSteps.length - 1 && stepIndex !== 9 && (
           <Button view="action" disabled={readOnly} onClick={goNext}>
             {t('wizard.next')}
-          </Button>
-        )}
-        {stepIndex === 0 && (
-          <Button view="action" loading={saveTargets.isPending} disabled={readOnly} onClick={onSaveTargets}>
-            {t('wizard.targets.save')}
           </Button>
         )}
       </Flex>

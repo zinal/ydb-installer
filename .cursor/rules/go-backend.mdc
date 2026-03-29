@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Go Backend Rules
 
-For backend work, follow `AGENTS.md`, `SPECIFICATION.md`, and `ARCHITECTURE.md`.
+For backend work, follow `AGENTS.md`, `SPECIFICATION.md`, `SPECIFICATION_UI.md` (where the REST API supports UI flows), and `ARCHITECTURE.md`.
 
 - Keep backend, API, execution, discovery, and security logic in `Go`.
 - Preserve clean boundaries between `api`, `app`, `domain`, `execution`, `discovery`, `storage`, `security`, `artifacts`, and `ydbops/adapter` code.

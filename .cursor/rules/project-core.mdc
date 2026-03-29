@@ -5,7 +5,7 @@ alwaysApply: true
 
 # YDB Installer Core Rules
 
-Use `AGENTS.md` as the project entry point. Treat `SPECIFICATION.md` as the source of truth for behavior and `ARCHITECTURE.md` as the source of truth for preferred implementation shape.
+Use `AGENTS.md` as the project entry point. Treat `SPECIFICATION.md` as the normative source of truth for product behavior (including `FR-*` requirements); use `SPECIFICATION_UI.md` as the UI implementation companion for routes and control inventories. Use `ARCHITECTURE.md` as the source of truth for preferred implementation shape.
 
 - Reference requirement IDs or document sections instead of duplicating requirements into code, notes, or new rules.
 - Preserve the copy-and-use baseline: no mandatory external database, workflow engine, message broker, or secret manager.

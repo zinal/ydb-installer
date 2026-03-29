@@ -20,6 +20,7 @@ import type {
 import { useWatch } from 'react-hook-form';
 import type { TargetsForm } from './targetForm';
 import type { ConfigurationDraft, DefaultSshAuthMode, TargetRowAuthMode } from './configurationDraft';
+import { defaultSshSummaryLines, rowSshSummaryLines } from './targetSshSummary';
 import { t } from '@/i18n';
 
 type Props = {
@@ -33,6 +34,7 @@ type Props = {
   draft: ConfigurationDraft;
   patchDraft: (patch: Partial<ConfigurationDraft> | ((d: ConfigurationDraft) => ConfigurationDraft)) => void;
   readOnly: boolean;
+  onCommitTargets: () => void;
 };
 
 function normalizeRowAuthMode(raw: string | undefined): TargetRowAuthMode {
@@ -45,6 +47,18 @@ function normalizeRowAuthMode(raw: string | undefined): TargetRowAuthMode {
 
 const DEFAULT_SSH_MODES: DefaultSshAuthMode[] = ['password', 'secret_key', 'agent'];
 
+function SshSummaryBlock({ lines }: { lines: string[] }) {
+  return (
+    <Flex direction="column" gap={1} className="installer-ssh-summary">
+      {lines.map((line, i) => (
+        <Text key={i} style={{ fontSize: 14, lineHeight: 1.5 }}>
+          {line}
+        </Text>
+      ))}
+    </Flex>
+  );
+}
+
 export function TargetsStep({
   register,
   control,
@@ -56,6 +70,7 @@ export function TargetsStep({
   draft,
   patchDraft,
   readOnly,
+  onCommitTargets,
 }: Props) {
   const targets = useWatch({ control, name: 'targets' }) ?? [];
   const [editingDefaults, setEditingDefaults] = useState(false);
@@ -84,56 +99,34 @@ export function TargetsStep({
     });
   }, [fields, patchDraft]);
 
-  const summaryDefaultSsh = () => {
-    const mode = draft.defaultSsh.authMode;
-    const modeLabel =
-      mode === 'password'
-        ? t('wizard.targets.authModePassword')
-        : mode === 'secret_key'
-          ? t('wizard.targets.authModeSecretKey')
-          : t('wizard.targets.authModeAgent');
-    const pwd =
-      mode === 'password'
-        ? draft.defaultSsh.passwordSet
-          ? t('wizard.targets.passwordSet')
-          : t('wizard.targets.passwordNotSet')
-        : null;
-    const key =
-      mode === 'secret_key'
-        ? draft.defaultSsh.keySelected
-          ? t('wizard.targets.keySelected')
-          : t('wizard.targets.keyNotSelected')
-        : null;
-    const parts = [
-      `${t('wizard.targets.defaultAuthModeLabel')}: ${modeLabel}`,
-      `${t('wizard.field.sshPort')}: ${draft.defaultSsh.port}`,
-      `${t('wizard.field.sshUser')}: ${draft.defaultSsh.user.trim() || '—'}`,
-    ];
-    if (pwd) parts.push(`${t('wizard.field.sshPassword')}: ${pwd}`);
-    if (key) parts.push(`${t('wizard.targets.uploadKey')}: ${key}`);
-    return parts.join(' · ');
-  };
-
   const authModeForRow = (fieldId: string) => normalizeRowAuthMode(draft.targetAuthModeByFieldId[fieldId]);
 
-  const authModeLabel = (mode: TargetRowAuthMode) => {
-    switch (mode) {
-      case 'default':
-        return t('wizard.targets.authModeDefault');
-      case 'password':
-        return t('wizard.targets.authModePassword');
-      case 'secret_key':
-        return t('wizard.targets.authModeSecretKey');
-      case 'agent':
-        return t('wizard.targets.authModeAgent');
-      default:
-        return mode;
-    }
-  };
+  const defaultBlockAuthOptions = DEFAULT_SSH_MODES.map((value) => ({
+    value,
+    content:
+      value === 'password'
+        ? t('wizard.targets.authModePassword')
+        : value === 'secret_key'
+          ? t('wizard.targets.authModeSecretKey')
+          : t('wizard.targets.authModeAgent'),
+  }));
+
+  const rowAuthOptions = (['default', 'password', 'secret_key', 'agent'] as const).map((value) => ({
+    value,
+    content:
+      value === 'default'
+        ? t('wizard.targets.authModeDefault')
+        : value === 'password'
+          ? t('wizard.targets.authModePassword')
+          : value === 'secret_key'
+            ? t('wizard.targets.authModeSecretKey')
+            : t('wizard.targets.authModeAgent'),
+  }));
 
   const onAddRow = () => {
     append({
       address: '',
+      sshPort: draft.defaultSsh.port,
       user: draft.defaultSsh.user || defaultTemplateUser,
       sshPassword: '',
       sshKeySelected: false,
@@ -150,28 +143,120 @@ export function TargetsStep({
         return { ...d, targetAuthModeByFieldId: next };
       });
     }
+    if (!readOnly) {
+      window.setTimeout(() => {
+        onCommitTargets();
+      }, 0);
+    }
   };
 
   const closeEdit = () => setEditIndex(null);
 
-  const defaultBlockAuthOptions = DEFAULT_SSH_MODES.map((value) => ({
-    value,
-    content:
-      value === 'password'
-        ? t('wizard.targets.authModePassword')
-        : value === 'secret_key'
-          ? t('wizard.targets.authModeSecretKey')
-          : t('wizard.targets.authModeAgent'),
-  }));
+  const confirmEditDialog = () => {
+    if (!readOnly) {
+      onCommitTargets();
+    }
+    closeEdit();
+  };
 
-  const rowAuthOptions = (['default', 'password', 'secret_key', 'agent'] as const).map((value) => ({
-    value,
-    content: authModeLabel(value),
-  }));
+  const finishEditingDefaults = () => {
+    if (!readOnly) {
+      onCommitTargets();
+    }
+    setEditingDefaults(false);
+  };
 
   const editIdx = editIndex;
   const editFieldId = editIdx !== null ? fields[editIdx]?.id : undefined;
   const editMode = editFieldId ? authModeForRow(editFieldId) : 'default';
+  const rowPortValue =
+    editIdx !== null && targets[editIdx]
+      ? editMode === 'default'
+        ? draft.defaultSsh.port
+        : targets[editIdx].sshPort > 0
+          ? targets[editIdx].sshPort
+          : 22
+      : 22;
+
+  const renderDefaultPasswordField = () =>
+    draft.defaultSsh.authMode === 'password' ? (
+      <TextInput
+        label={t('wizard.field.sshPassword')}
+        type="password"
+        placeholder={t('wizard.targets.passwordPlaceholder')}
+        onUpdate={() =>
+          patchDraft((d) => ({
+            ...d,
+            defaultSsh: { ...d.defaultSsh, passwordSet: true },
+          }))
+        }
+      />
+    ) : null;
+
+  const renderDefaultSecretKeyField = () =>
+    draft.defaultSsh.authMode === 'secret_key' ? (
+      <Flex direction="column" gap={1}>
+        <input
+          ref={defaultKeyInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          accept=".pem,.key,*"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setDefaultKeyLabel(f ? t('wizard.targets.keySelected') : null);
+            if (f) {
+              patchDraft((d) => ({
+                ...d,
+                defaultSsh: { ...d.defaultSsh, keySelected: true },
+              }));
+            }
+          }}
+        />
+        <Button view="outlined" onClick={() => defaultKeyInputRef.current?.click()}>
+          {t('wizard.targets.uploadKey')}
+        </Button>
+        {defaultKeyLabel && (
+          <Text color="secondary" style={{ fontSize: 12 }}>
+            {defaultKeyLabel}
+          </Text>
+        )}
+        <Text color="secondary" style={{ fontSize: 12 }}>
+          {t('wizard.targets.keyUploadHint')}
+        </Text>
+      </Flex>
+    ) : null;
+
+  const renderRowPasswordField = () =>
+    editMode === 'password' ? (
+      <TextInput
+        label={t('wizard.field.sshPassword')}
+        type="password"
+        placeholder={t('wizard.targets.passwordPlaceholder')}
+        {...register(`targets.${editIdx!}.sshPassword` as const)}
+      />
+    ) : null;
+
+  const renderRowSecretKeyField = () =>
+    editMode === 'secret_key' ? (
+      <Flex direction="column" gap={1}>
+        <input
+          ref={rowKeyInputRef}
+          type="file"
+          style={{ display: 'none' }}
+          accept=".pem,.key,*"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setValue(`targets.${editIdx!}.sshKeySelected`, Boolean(f));
+          }}
+        />
+        <Button view="outlined" onClick={() => rowKeyInputRef.current?.click()}>
+          {t('wizard.targets.uploadKey')}
+        </Button>
+        <Text color="secondary" style={{ fontSize: 12 }}>
+          {t('wizard.targets.keyUploadHint')}
+        </Text>
+      </Flex>
+    ) : null;
 
   return (
     <Flex direction="column" gap={4}>
@@ -186,15 +271,12 @@ export function TargetsStep({
             </Button>
           )}
         </Flex>
-        <Text color="secondary" style={{ marginBottom: 12, fontSize: 13 }}>
-          {t('wizard.targets.defaultSshHint')}
-        </Text>
 
         {!editingDefaults || readOnly ? (
-          <Text style={{ fontSize: 14, lineHeight: 1.5 }}>{summaryDefaultSsh()}</Text>
+          <SshSummaryBlock lines={defaultSshSummaryLines(draft, t)} />
         ) : (
           <Flex direction="column" gap={3} style={{ maxWidth: 520 }}>
-            <Text variant="subheader-2">{t('wizard.targets.defaultAuthModeLabel')}</Text>
+            <Text variant="subheader-2">{t('wizard.targets.sshConnectionSection')}</Text>
             <RadioGroup
               options={defaultBlockAuthOptions}
               value={draft.defaultSsh.authMode}
@@ -229,56 +311,9 @@ export function TargetsStep({
                 />
               </div>
             </Flex>
-            {draft.defaultSsh.authMode === 'password' && (
-              <TextInput
-                label={t('wizard.field.sshPassword')}
-                type="password"
-                placeholder={t('wizard.targets.passwordPlaceholder')}
-                onUpdate={() =>
-                  patchDraft((d) => ({
-                    ...d,
-                    defaultSsh: { ...d.defaultSsh, passwordSet: true },
-                  }))
-                }
-              />
-            )}
-            {draft.defaultSsh.authMode === 'secret_key' && (
-              <Flex direction="column" gap={1}>
-                <input
-                  ref={defaultKeyInputRef}
-                  type="file"
-                  style={{ display: 'none' }}
-                  accept=".pem,.key,*"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    setDefaultKeyLabel(f ? t('wizard.targets.keySelected') : null);
-                    if (f) {
-                      patchDraft((d) => ({
-                        ...d,
-                        defaultSsh: { ...d.defaultSsh, keySelected: true },
-                      }));
-                    }
-                  }}
-                />
-                <Button view="outlined" onClick={() => defaultKeyInputRef.current?.click()}>
-                  {t('wizard.targets.uploadKey')}
-                </Button>
-                {defaultKeyLabel && (
-                  <Text color="secondary" style={{ fontSize: 12 }}>
-                    {defaultKeyLabel}
-                  </Text>
-                )}
-                <Text color="secondary" style={{ fontSize: 12 }}>
-                  {t('wizard.targets.keyUploadHint')}
-                </Text>
-              </Flex>
-            )}
-            {draft.defaultSsh.authMode === 'agent' && (
-              <Text color="secondary" style={{ fontSize: 13 }}>
-                {t('wizard.targets.defaultAgentHint')}
-              </Text>
-            )}
-            <Button view="action" size="s" onClick={() => setEditingDefaults(false)}>
+            {renderDefaultPasswordField()}
+            {renderDefaultSecretKeyField()}
+            <Button view="action" size="s" onClick={finishEditingDefaults}>
               {t('wizard.targets.doneEditingDefaults')}
             </Button>
           </Flex>
@@ -300,40 +335,45 @@ export function TargetsStep({
             <thead>
               <tr>
                 <th>{t('wizard.targets.tableAddress')}</th>
-                <th>{t('wizard.targets.tableHostId')}</th>
-                <th>{t('wizard.targets.tableUser')}</th>
-                <th>{t('wizard.targets.tableAuthMode')}</th>
+                <th>{t('wizard.targets.tableSshConnection')}</th>
                 {!readOnly && <th>{t('wizard.targets.tableActions')}</th>}
               </tr>
             </thead>
             <tbody>
               {fields.length === 0 ? (
                 <tr>
-                  <td colSpan={readOnly ? 4 : 5}>
+                  <td colSpan={readOnly ? 2 : 3}>
                     <Text color="secondary">{t('wizard.targets.emptyTable')}</Text>
                   </td>
                 </tr>
               ) : (
-                fields.map((field, idx) => (
-                  <tr key={field.id}>
-                    <td>{targets[idx]?.address?.trim() || '—'}</td>
-                    <td>{idx + 1}</td>
-                    <td>{targets[idx]?.user?.trim() || '—'}</td>
-                    <td>{authModeLabel(authModeForRow(field.id))}</td>
-                    {!readOnly && (
-                      <td>
-                        <Flex gap={1} wrap="wrap">
-                          <Button size="s" view="outlined" onClick={() => setEditIndex(idx)}>
-                            {t('wizard.targets.edit')}
-                          </Button>
-                          <Button size="s" view="outlined-danger" type="button" onClick={() => onRemoveRow(idx)}>
-                            {t('wizard.targets.remove')}
-                          </Button>
-                        </Flex>
+                fields.map((field, idx) => {
+                  const row = targets[idx];
+                  const mode = authModeForRow(field.id);
+                  const lines = row
+                    ? rowSshSummaryLines(row, mode, draft, t)
+                    : defaultSshSummaryLines(draft, t);
+                  return (
+                    <tr key={field.id}>
+                      <td>{row?.address?.trim() || '—'}</td>
+                      <td className="installer-ssh-summary-cell">
+                        <SshSummaryBlock lines={lines} />
                       </td>
-                    )}
-                  </tr>
-                ))
+                      {!readOnly && (
+                        <td>
+                          <Flex gap={1} wrap="wrap">
+                            <Button size="s" view="outlined" onClick={() => setEditIndex(idx)}>
+                              {t('wizard.targets.edit')}
+                            </Button>
+                            <Button size="s" view="outlined-danger" type="button" onClick={() => onRemoveRow(idx)}>
+                              {t('wizard.targets.remove')}
+                            </Button>
+                          </Flex>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -345,20 +385,14 @@ export function TargetsStep({
         <Dialog.Body>
           {editIdx !== null && fields[editIdx] && (
             <Flex direction="column" gap={3}>
-              <Text color="secondary" style={{ fontSize: 13 }}>
-                {t('wizard.targets.hostIdLabel')} {editIdx + 1}
-              </Text>
               <TextInput
                 label={t('wizard.field.address')}
                 placeholder={t('wizard.targets.addressPlaceholder')}
                 size="l"
                 {...register(`targets.${editIdx}.address` as const)}
               />
-              <TextInput
-                label={t('wizard.field.sshUser')}
-                {...register(`targets.${editIdx}.user` as const)}
-              />
-              <Text variant="subheader-2">{t('wizard.targets.authMode')}</Text>
+
+              <Text variant="subheader-2">{t('wizard.targets.sshConnectionSection')}</Text>
               <RadioGroup
                 options={rowAuthOptions}
                 value={editMode}
@@ -372,47 +406,39 @@ export function TargetsStep({
                   if (mode === 'default') {
                     setValue(`targets.${editIdx}.sshPassword`, '');
                     setValue(`targets.${editIdx}.sshKeySelected`, false);
+                    setValue(`targets.${editIdx}.sshPort`, draft.defaultSsh.port);
                   }
                 }}
               />
-              {editMode === 'password' && (
-                <TextInput
-                  label={t('wizard.field.sshPassword')}
-                  type="password"
-                  placeholder={t('wizard.targets.passwordPlaceholder')}
-                  {...register(`targets.${editIdx}.sshPassword` as const)}
+
+              <Flex gap={2} wrap="wrap">
+                <NumberInput
+                  label={t('wizard.field.sshPort')}
+                  value={rowPortValue}
+                  disabled={editMode === 'default'}
+                  onUpdate={(v) => {
+                    if (editMode === 'default') return;
+                    setValue(
+                      `targets.${editIdx}.sshPort`,
+                      typeof v === 'number' && v > 0 ? v : 22,
+                    );
+                  }}
                 />
-              )}
-              {editMode === 'secret_key' && (
-                <Flex direction="column" gap={1}>
-                  <input
-                    ref={rowKeyInputRef}
-                    type="file"
-                    style={{ display: 'none' }}
-                    accept=".pem,.key,*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      setValue(`targets.${editIdx}.sshKeySelected`, Boolean(f));
-                    }}
+                <div style={{ minWidth: 200, flex: 1 }}>
+                  <TextInput
+                    label={t('wizard.field.sshUser')}
+                    {...register(`targets.${editIdx}.user` as const)}
                   />
-                  <Button view="outlined" onClick={() => rowKeyInputRef.current?.click()}>
-                    {t('wizard.targets.uploadKey')}
-                  </Button>
-                  <Text color="secondary" style={{ fontSize: 12 }}>
-                    {t('wizard.targets.keyUploadHint')}
-                  </Text>
-                </Flex>
-              )}
-              {editMode === 'agent' && (
-                <Text color="secondary" style={{ fontSize: 13 }}>
-                  {t('wizard.targets.rowAgentHint')}
-                </Text>
-              )}
+                </div>
+              </Flex>
+
+              {renderRowPasswordField()}
+              {renderRowSecretKeyField()}
             </Flex>
           )}
         </Dialog.Body>
         <Dialog.Footer
-          onClickButtonApply={closeEdit}
+          onClickButtonApply={confirmEditDialog}
           textButtonApply={t('wizard.dialog.done')}
           propsButtonApply={{ view: 'action' }}
         />

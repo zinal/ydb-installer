@@ -25,6 +25,20 @@
   min-width: min-content;
 }
 
+/*
+ * Stepper.Item renders a Button; the icon uses currentColor. Without this, the selected step’s
+ * outlined button text color can override the semantic success/idle/error colors and read as a gray circle.
+ */
+.wizard-stepper-scroll .g-stepper__item_selected:not(.g-stepper__item_disabled) .g-stepper__item-icon_view_success {
+  color: var(--g-color-text-positive) !important;
+}
+.wizard-stepper-scroll .g-stepper__item_selected:not(.g-stepper__item_disabled) .g-stepper__item-icon_view_idle {
+  color: var(--g-color-text-secondary) !important;
+}
+.wizard-stepper-scroll .g-stepper__item_selected:not(.g-stepper__item_disabled) .g-stepper__item-icon_view_error {
+  color: var(--g-color-text-danger) !important;
+}
+
 /* —— Installer readability: larger type + higher contrast (not light-gray on white) —— */
 body.root {
   /* Text colors: darker “muted” tiers for white background */
@@ -94,4 +108,10 @@ body.root {
 .installer-targets-table th {
   font-weight: 600;
   background: var(--g-color-base-generic);
+}
+
+.installer-targets-table td.installer-ssh-summary-cell {
+  vertical-align: top;
+  min-width: 220px;
+  max-width: 420px;
 }

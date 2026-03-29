@@ -56,6 +56,14 @@ Automation sources listed in this subsection are behavioral and domain reference
 - `Degraded Completion State`: a session outcome in which the operator explicitly accepts completion despite failed or incomplete verification checks; the Installer records which checks did not pass and the fact of operator acceptance.
 - `Copy-and-Use Deployment Model`: a distribution and operating model in which the Installer can be copied or unpacked onto a single Control Host and used without mandatory external infrastructure services such as a separate database, workflow engine, message broker, or secret manager for baseline operation.
 
+### 1.5 Specification structure
+
+**`SPECIFICATION.md` (this document)** is the single **normative** requirements baseline: workflows, discovery, cluster layout, storage, security, artifacts, validation, execution, monitoring, cancellation, reporting, REST API, installation modes, roles, **web UI obligations** (`FR-INTERACTIVE-*`, `FR-UI-*`, `FR-I18N-*`), usability, and acceptance criteria.
+
+**`SPECIFICATION_UI.md`** is a **UI implementation companion**: routes, per-step control inventories, Monitoring/Logs affordances, and interaction notes that **realize** the requirements here. It cites `FR-*` identifiers but does not introduce parallel SHALL statements.
+
+When this document references “§6” or “§18”, it means those sections **in this file** unless another document is named explicitly.
+
 ## 2. Product Overview
 
 ### 2.1 Product Goal
@@ -210,6 +218,8 @@ FR-DISCOVERY-002A. SSH authentication SHALL support password-based and key-based
 
 FR-DISCOVERY-002B. SSH authentication settings SHALL be configurable globally with optional per-host overrides.
 
+FR-DISCOVERY-002C. SSH TCP port SHALL be configurable in the global default profile and MAY be set per target when per-target SSH settings apply.
+
 ### 5.2 Discovery Outputs
 
 FR-DISCOVERY-003. The Installer SHALL collect the following information from each target host:
@@ -254,7 +264,7 @@ FR-DISCOVERY-010A. When Expert Override is enabled, the Installer SHALL allow th
 
 FR-DISCOVERY-010B. When Expert Override is enabled, the Installer SHALL surface the associated risk warnings.
 
-## 6. Configuration Steps Interface and Mode-Specific Behavior
+## 6. Web Application, Configuration Workflow, and Operator UI
 
 ### 6.1 Guided Workflow
 
@@ -289,7 +299,7 @@ FR-INTERACTIVE-005. The configuration-step workflow SHALL provide screens or equ
 - database settings;
 - review and approval.
 
-Normative descriptions of the configuration-step sequence, transition rules, and form controls appear in §6.5–§6.7 (together with FR-INTERACTIVE-009 and FR-INTERACTIVE-010). Supporting Monitoring and Logs views are specified in §6.8–§6.9. In **batch** Installation Mode, the configuration-step forms represent a pre-filled read-only projection of the effective batch specification except for confirmation and run-control actions explicitly allowed elsewhere in this specification.
+The configuration-step sequence and transition rules appear in §6.5; batch presentation rules appear in §6.7; per-step form control inventories appear in **SPECIFICATION_UI.md** §3 (with FR-INTERACTIVE-009 and FR-INTERACTIVE-009B). Monitoring and Logs presentation is required by §6.8 and detailed in **SPECIFICATION_UI.md** §4 (FR-INTERACTIVE-010). In **batch** Installation Mode, the configuration-step forms represent a pre-filled read-only projection of the effective batch specification except for confirmation and run-control actions explicitly allowed elsewhere in this specification.
 
 FR-INTERACTIVE-006. In **interactive** Installation Mode, the configuration-step workflow SHALL validate user input before advancing to the next step.
 
@@ -314,9 +324,9 @@ FR-INTERACTIVE-009. The guided configuration-step flow SHALL present the configu
 
 FR-INTERACTIVE-009A. The guided configuration-step flow SHALL enforce the transition rules stated in §6.5.
 
-FR-INTERACTIVE-009B. The guided configuration-step flow SHALL provide the input controls identified in §6.6 for each form.
+FR-INTERACTIVE-009B. The guided configuration-step flow SHALL provide the input controls identified in **SPECIFICATION_UI.md** §3 for each configuration step.
 
-FR-INTERACTIVE-010. The Installer UI SHALL provide the application shell, Home session view, execution monitoring screen, and logs screen described in §6.4, §6.8, and §6.9 in all Installation Modes.
+FR-INTERACTIVE-010. The Installer UI SHALL provide the application shell, Home session view, execution monitoring screen, and logs screen in all Installation Modes. Detailed layouts and controls for Monitoring and Logs appear in **SPECIFICATION_UI.md** §4.
 
 FR-INTERACTIVE-010A. The Installer UI SHALL provide a configuration-step view described in §6.5–§6.7 that is editable in **interactive** mode and pre-filled/read-only in **batch** mode (FR-MODE-003, FR-BATCH-001, FR-ACCESS-005).
 
@@ -334,14 +344,16 @@ FR-INTERACTIVE-015. Home SHALL provide a role selector (`Operator` or `Observer`
 
 FR-INTERACTIVE-015A. Username input MAY be shown when the configured authentication scheme requires it. When the scheme does not require a username or equivalent identity field, the Home screen SHALL omit it.
 
+FR-INTERACTIVE-015B. Until full authentication integration is available, the UI prototype MAY persist the role selected on the Home screen (`Operator` vs `Observer`) in browser `sessionStorage` so a full page reload does not reset role affordances until the operator uses **Logout** or equivalent.
+
 FR-INTERACTIVE-016. Switching roles from an active session SHALL require re-authentication for the selected role, consistent with §10.2.
 
 | Screen | Route (illustrative) | Purpose | Operator controls | Observer controls |
 |--------|----------------------|---------|-------------------|-------------------|
 | Home | `/` | Authentication and session-entry screen with role switch and credentials; after authentication, it shows the current session identity and entry points to workflow screens. | Authenticate as **Operator**; navigate to Configuration, Monitoring, and Logs; use actions permitted by role and mode. | Authenticate as **Observer**; navigate to Configuration, Monitoring, and Logs; read-only access only. |
-| Configuration | `/configuration` | Multi-step session workflow (§6.5–§6.7), including configuration, review, and run-state step 11. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
+| Configuration | `/configuration` | Multi-step session workflow (§6.5–§6.7; batch rules §6.7), including configuration, review, and run-state step 11. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
 | Monitoring | `/monitoring` | Live or polled progress, phase and task detail, run state, and failure context (§14, §15). | Read run state; request cancel/resume where authorized by policy and implementation. | Read run state only; no cancel/resume or other execution-control actions. |
-| Logs | `/logs` | Session log view with filtering and historical browsing for installation logs (§6.9, §14). | Read logs; use filters; export/download logs where available. | Read logs with same filtering/navigation in read-only form; no operator-only execution controls. |
+| Logs | `/logs` | Session log view with filtering and historical browsing for installation logs (**SPECIFICATION_UI.md** §4.2, §14). | Read logs; use filters; export/download logs where available. | Read logs with same filtering/navigation in read-only form; no operator-only execution controls. |
 | Logout | `/logout` | Terminate access to the application. | End the authenticated session and return to the Home screen. | Same as for **Operator**. |
 
 FR-INTERACTIVE-017. Navigation links for Home, Configuration, Monitoring, Logs, and Logout SHALL be available from every screen.
@@ -359,6 +371,8 @@ FR-INTERACTIVE-019. The interactive configuration-step flow SHALL implement the 
 FR-INTERACTIVE-020. Step identifiers SHALL be stable product labels.
 
 FR-INTERACTIVE-021. The UI SHALL show configuration steps as tabs or breadcrumbs at the top of the screen, using readable labels.
+
+FR-INTERACTIVE-021A. The step strip SHALL distinguish completed or satisfied steps from not-yet-reached steps using stable iconography (for example success versus idle). Re-selecting a completed step SHALL NOT present it as unstarted solely because it is the active selection; presentation SHALL preserve semantic step state (including mitigating component styling that would otherwise obscure success state on the selected step).
 
 | Step | Id | Label (English) |
 |------|-----|-----------------|
@@ -382,7 +396,7 @@ FR-INTERACTIVE-023. Back from any step SHALL return to the immediately previous 
 
 FR-INTERACTIVE-024. Transition from step 1 to step 2 SHALL be allowed only after the target list is saved and contains at least one valid target address.
 
-FR-INTERACTIVE-024A. The UI SHOULD require an explicit save action before transition from step 1 to step 2 so that server state matches the form.
+FR-INTERACTIVE-024A. The UI SHOULD require an explicit **commit** of target edits before transition from step 1 to step 2 so that server state matches the form (for example **Done** on the default SSH block, **Done** on the per-row edit dialog, or row removal that updates the session on the server), rather than relying on implicit autosave alone.
 
 FR-INTERACTIVE-025. Running discovery SHALL require saved targets.
 
@@ -410,175 +424,20 @@ FR-INTERACTIVE-030A. Returning to step 11 SHALL preserve the latest run-state an
 
 FR-INTERACTIVE-031. The operator MAY open Monitoring or Home while configuration is incomplete.
 
-FR-INTERACTIVE-031A. The step strip SHOULD reflect persisted progress when returning to `/configuration`.
+FR-INTERACTIVE-031A. The step strip SHOULD reflect persisted progress when returning to `/configuration`, including furthest-step progress retained in browser session storage keyed to the installation session where needed so success markers survive reload or remount.
 
-### 6.6 Configuration Form Definitions (Descriptions and Input Controls)
+FR-INTERACTIVE-031B. The `/configuration` URL SHALL carry the active step index in a query parameter (for example `?step=`) kept in sync with navigation so the address bar reflects the current step and deep links can be shared.
 
-Each subsection describes **one configuration-step form**: its role in the workflow, the **primary input controls** (type and purpose), and **dependencies** on other steps or data. Control labels are illustrative. Localization and secret-handling requirements are defined by FR-I18N-001, FR-SECURITY-008, and FR-USABILITY-005.
+FR-INTERACTIVE-031C. When the web UI is served from the Installer’s embedded static files, HTTP GET requests for paths that are not static assets under the UI mount SHALL be served the SPA entry document so browser reload on client-routed paths (such as `/configuration` or `/configuration?step=3`) does not return `404 Not Found`.
 
-#### 6.6.1 Step 1 — Target definition (`targets`)
 
-**Description.** Collect the set of target hosts and parameters needed to reach them over SSH for discovery and later execution (§5.1, FR-DISCOVERY-001, FR-DISCOVERY-002).
+### 6.6 Configuration step forms: control inventories
 
-**Input controls.**
+Per-step control inventories (field types, grouping, and semantics) appear in **SPECIFICATION_UI.md** §3 and satisfy FR-INTERACTIVE-009B.
 
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Target rows (repeatable) | List | One row per target host. |
-| Address | Text | Hostname or IP (FR-DISCOVERY-001), with the optional port (22 used by default). Required per row. |
-| SSH auth mode | Selection | Use default, password, secret key or SSH Agent. Required per row. |
-| SSH user | Text | Login user for SSH. Required per row. |
-| SSH password | Password Text | Password for SSH. Required for current row when password mode is selected. |
-| SSH key | Upload button | Private key for SSH. Required for current row when secret key mode is selected. |
-| Host id | Integer | Stable identifier for the host in session configuration. Automatically assigned, 1-N |
-| Add / Remove | Buttons | Maintain the list. |
-| Default SSH authentication | All SSH-related fields | listed above, to be used by default. Auth modes exclude the "use default" option |
-| Save targets | Primary action | Persists targets to the session before discovery or later phases. |
+### 6.7 Batch-mode configuration presentation
 
-The form should contain two blocks:
-- default SSH access settings;
-- table with the targets.
-
-Both blocks should display a read-only format of the current settings, and contain buttons (for **Operator** access) to edit.
-
-The table's edit buttons should be Add, Remove and Edit, each allowing to provide the necessary settings.
-
-SSH access details for the particular target should allow to use the default settings, or to switch to custom settings, which must be entered in the latter case.
-
-#### 6.6.2 Step 2 — Discovery run (`discovery_run`)
-
-**Description.** Trigger remote discovery against saved targets and show run status (phase 2 in §4.1).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Run discovery | Button | Starts discovery; disabled until targets are saved. |
-| Refresh discovery | Button | Re-runs discovery to update the Discovery Snapshot (FR-DISCOVERY-006). |
-| Progress / error display | Text, progress indicator | Shows running state and per-session errors without leaking secrets. |
-
-#### 6.6.3 Step 3 — Discovery results (`discovery_results`)
-
-**Description.** Read-only presentation of the Discovery Snapshot (§5.2) for operator review before cluster design.
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Host inventory table or cards | Read-only grid | Hostname, FQDN, OS, hardware summary, disk inventory columns, per-host discovery errors (FR-DISCOVERY-003, FR-DISCOVERY-007). |
-| Continue to configuration | Primary action | Moves to layout when the operator is ready; the UI can warn if critical hosts failed discovery. |
-
-#### 6.6.4 Step 4 — Cluster layout (`layout`)
-
-**Description.** Define base storage topology, optional bridge mode and piles, node roles, and placement (§8, FR-LAYOUT-001–FR-LAYOUT-017, FR-INTERACTIVE-007).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Preset selector | Select or radio group | Single-DC `block-4-2`, multi-DC `mirror-3-dc`, `reduced mirror-3-dc`, bridge preset (FR-INTERACTIVE-007). |
-| Base storage topology | Select | Must match §8.1; distinct from bridge mode (FR-LAYOUT-003). |
-| Bridge mode | Toggle | When on, enables pile and synchronous-replication controls (FR-LAYOUT-002, FR-LAYOUT-014–FR-LAYOUT-017). |
-| Pile definitions | Repeatable group | Name/id and failure-domain labels for each pile (FR-LAYOUT-004, FR-LAYOUT-005). |
-| Per-host or per-node role assignment | Matrix, multi-select, or drag targets | Storage Node, Compute Node, Broker Node where applicable (FR-LAYOUT-008–FR-LAYOUT-010). |
-| Compute nodes per host | Number (where allowed) | FR-LAYOUT-009. |
-| Location attributes | Text or select per host | Rack, data center, availability zone, pile membership (FR-LAYOUT-007). |
-
-#### 6.6.5 Step 5 — Disk selection (`storage`)
-
-**Description.** Map discovered disks to YDB storage, partitioning, labels, and media grouping (§9, FR-STORAGE-001–FR-STORAGE-008).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Disk pick lists per host | Multi-select from discovery | Restricted to Discovery Snapshot unless Expert Override is on (FR-DISCOVERY-010, FR-STORAGE-001). |
-| Expert Override | Toggle + text fields | Manual device identifiers with risk warnings (FR-DISCOVERY-010). |
-| Partitioning scheme | Select or guided form | For unpartitioned disks (FR-STORAGE-002, FR-STORAGE-003, FR-STORAGE-004). |
-| Disk type / kind / label pattern | Fields per group | FR-STORAGE-005–FR-STORAGE-008. |
-| Safety summaries | Read-only callouts | Warnings for mounted, system, or in-use disks (FR-STORAGE-009–FR-STORAGE-011). |
-
-#### 6.6.6 Step 6 — Network & endpoints (`network`)
-
-**Description.** Client-facing and intra-cluster network settings, including separated front-end and back-end models (§8.3, FR-LAYOUT-011–FR-LAYOUT-013).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Network model | Radio | Standard single-network vs separated front/back (FR-LAYOUT-011, FR-LAYOUT-012). |
-| Front-end FQDN / endpoints | Text | Client access (FR-LAYOUT-013). |
-| Back-end FQDN / internal addresses | Text | Intra-cluster communication (FR-LAYOUT-013). |
-| Additional listeners / ports | Text or number | As required by selected layout and validation. |
-
-#### 6.6.7 Step 7 — Security & TLS (`security`)
-
-**Description.** TLS materials, Installer-facing HTTPS options where relevant, and YDB authentication settings (§10).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| TLS mode | Select | Operator-provided certs, installer-managed generation, or equivalent (FR-SECURITY-002, FR-SECURITY-003). |
-| Certificate and key material | File upload or path on control host | FR-SECURITY-002; masked display. |
-| Certificate generation parameters | Form fields | Validity, SANs, CA settings as supported (FR-SECURITY-003). |
-| YDB authentication | Toggles and credential capture | FR-SECURITY-006, FR-SECURITY-007; secrets masked. |
-
-#### 6.6.8 Step 8 — Artifacts & version (`artifacts`)
-
-**Description.** YDB version, configuration generation, and artifact source (§11, FR-ARTIFACT-001–FR-ARTIFACT-005).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Artifact source mode | Radio | Download, local archive, local binaries (FR-ARTIFACT-001). |
-| Version / component selectors | Text or select | Compatible with configuration V1 or V2 (FR-ARTIFACT-004). |
-| Local path fields | Text | Paths on the control host for archives or binaries. |
-| Offline / mirror URL | Text | When used instead of public download in restricted environments. |
-
-#### 6.6.9 Step 9 — Database settings (`database`)
-
-**Description.** Initial database creation parameters used before compute nodes start (§13.4, FR-EXECUTION-009).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Database name | Text | Initial database identifier. |
-| Domain / root paths | Text | As required by YDB deployment model. |
-| Additional DB options | Fields | Charset, pools, or other documented first-run settings exposed by the Installer. |
-
-#### 6.6.10 Step 10 — Review & approval (`review`)
-
-**Description.** Consolidated read-only summary of effective configuration, latest preflight-validation outcome captured before review, destructive-scope confirmation, and execution start (§12, §9.2).
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Configuration summary | Read-only sections | Hosts, topology, disks, security, artifacts. |
-| Validation results | Read-only panel | Shows latest preflight result summary with blocking vs warning classification (FR-VALIDATION-003). |
-| Approve destructive actions | Checkbox or typed confirmation | Identifies affected hosts and disks (FR-STORAGE-012). |
-| Start installation / Proceed | Primary button | Available only when blocking errors are cleared and required destructive confirmations are completed. |
-
-#### 6.6.11 Step 11 — Run state & confirmations (`run_state`)
-
-**Description.** Execution-time configuration-step screen that shows current session state, highlights pending confirmation requests that gate progress, and provides quick navigation to monitoring and logs views. For **Operator**, this step allows submission of confirmation responses where required. For **Observer**, this step is read-only.
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Current run state summary | Read-only panel | Current phase/task, session status, elapsed time, and high-level warnings/errors (FR-MONITORING-002). |
-| Pending confirmation requests | List | Shows active confirmation prompts that gate execution, including scope and consequence summary. |
-| Confirmation response controls | Buttons or form actions (authorized roles) | Allow **Operator** to submit required responses; **Observer** sees state only (FR-ACCESS-002, FR-ACCESS-003, FR-UI-009). |
-| Open Monitoring | Link or button | Navigates to `/monitoring` for detailed progress timeline and host/task status. |
-| Open Logs | Link or button | Navigates to `/logs` for detailed installation logs. |
-
-### 6.7 Batch-Mode Pre-Filled Configuration Steps (No Separate Batch Screen)
-
-**Description.** In **batch** Installation Mode, the UI uses the same `/configuration` route and step structure as §6.5–§6.6 to present the effective batch-derived plan. There is no separate batch configuration screen or route.
+**Description.** In **batch** Installation Mode, the UI uses the same `/configuration` route and step structure as §6.5 and the read-only projection rules below. There is no separate batch configuration screen or route.
 
 **Interaction rules.**
 
@@ -586,37 +445,13 @@ SSH access details for the particular target should allow to use the default set
 |------|-----------|
 | Batch data source | Session configuration values come from the loaded batch specification and its validated effective form (FR-BATCH-001–FR-BATCH-004). |
 | No configuration overrides | Configuration-step controls for targets, topology, storage, network, security, artifacts, and database settings are pre-filled and read-only in **batch** mode (FR-MODE-003, FR-ACCESS-005). |
-| Allowed actions | Users with **Operator** privileges can provide required confirmation responses and run-control actions where this specification allows them (FR-ACCESS-002, FR-BATCH-008A, §15). |
+| Allowed actions | Users with **Operator** privileges can provide required confirmation responses and run-control actions where **SPECIFICATION.md** allows them (FR-ACCESS-002, FR-BATCH-008A, §15). |
 | Visibility | The UI indicates that values are batch-sourced, pre-filled, and non-editable for the running session (FR-BATCH-001A). |
 
-### 6.8 Execution Monitoring Screen
+### 6.8 Monitoring and Logs views
 
-**Description.** Satisfies FR-MONITORING-001–FR-MONITORING-003 and FR-RUNCONTROL-001: current phase and task, per-host state, elapsed time, log tail, warnings and errors, cancellation, and bridge-vs-base distinction where applicable.
+Detailed **presentation** for the execution monitoring screen and the dedicated logs screen—including control inventories, filtering affordances, and navigation patterns—is specified in **SPECIFICATION_UI.md** §4, implementing FR-MONITORING-001–FR-MONITORING-005, FR-MONITORING-006, FR-RUNCONTROL-001, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as applicable.
 
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Phase and task display | Read-only text / timeline | FR-MONITORING-002. |
-| Host list with status | Table or list | FR-MONITORING-002. |
-| Log viewer | Scrollable text with severity | FR-MONITORING-002; secrets redacted. |
-| Filter by host / phase / severity | Select or toggles | FR-UI-006. |
-| Cancel run | Button (authorized roles) | FR-RUNCONTROL-001; cooperative cancel (FR-RUNCONTROL-002–FR-RUNCONTROL-005). |
-| Export / download logs or report | Links | When FR-REPORTING applies post-run. |
-
-### 6.9 Logs Screen
-
-**Description.** Dedicated view for installation logs of the active session, including live tail during execution and historical log browsing after completion or failure.
-
-**Input controls.**
-
-| Control | Type | Semantics |
-|---------|------|-----------|
-| Log stream viewer | Scrollable text/table | Shows timestamped log entries with severity; secrets redacted (FR-SECURITY-008, FR-USABILITY-005). |
-| Filter by host / phase / severity / time range | Selectors and inputs | Narrows visible log entries for troubleshooting (FR-UI-006). |
-| Auto-follow toggle | Toggle | Keeps view pinned to newest entries while enabled. |
-| Download or export logs | Link or button | Exports logs for reporting and troubleshooting (FR-REPORTING-002, FR-REPORTING-006). |
-| Back to run state or monitor | Link or button | Returns to `/configuration` step 11 or `/monitoring` without losing session context. |
 
 ## 7. Batch Installation Mode
 
@@ -1028,7 +863,7 @@ FR-API-004. The Installer UI SHALL use the documented REST API for data retrieva
 
 FR-API-004A. The Installer UI SHALL NOT rely on private backend-only interfaces for normal application behavior.
 
-## 18. User Interface Requirements
+## 18. Global, Visual, and Localization Requirements for the Web UI
 
 FR-UI-001. The Installer UI SHALL be web-based.
 
@@ -1093,6 +928,7 @@ FR-I18N-003. UI language resources SHALL be loaded from supplied resource files.
 FR-I18N-003A. UI language resources SHALL NOT be compiled into the Installer backend binary as the only supported source of localized text.
 
 FR-I18N-004. REST API messages and log messages SHALL be written in English.
+
 
 ## 19. Usability and Installer Best Practices
 

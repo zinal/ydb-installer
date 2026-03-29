@@ -4,15 +4,17 @@ This file defines the project-level guidance for coding agents. Keep it concise 
 
 ## Source Of Truth
 
-- Product behavior and acceptance criteria: `SPECIFICATION.md`
+- Product behavior and acceptance criteria: `SPECIFICATION.md` (normative `FR-*` requirements, including web UI obligations in §6 and §18)
+- UI implementation detail (routes, form controls, view affordances): `SPECIFICATION_UI.md` (companion to §6 and §18; subordinate to `SPECIFICATION.md`)
 - Target design and preferred implementation shape: `ARCHITECTURE.md`
 
 When a change depends on requirements, cite the relevant requirement ID or section instead of restating the document. If guidance conflicts, follow this order:
 
 1. `SPECIFICATION.md`
 2. `ARCHITECTURE.md`
-3. this file
-4. local code comments and nearby conventions
+3. `SPECIFICATION_UI.md` (where it elaborates UI structure without contradicting `SPECIFICATION.md`)
+4. this file
+5. local code comments and nearby conventions
 
 ## Project Invariants
 
