@@ -22,6 +22,7 @@ export function AppLayout() {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
+          className="installer-content-width"
           style={{ padding: '12px 24px' }}
         >
           <Text variant="header-1">{t('app.title')}</Text>
@@ -55,7 +56,7 @@ export function AppLayout() {
           ) : null}
         </Flex>
         {identity && (
-          <Flex style={{ padding: '8px 24px 14px' }}>
+          <Flex className="installer-content-width" style={{ padding: '8px 24px 14px' }}>
             <Text variant="body-2" color="complementary">
               {sessionLoading && !session
                 ? t('layout.sessionLoading')
@@ -64,7 +65,11 @@ export function AppLayout() {
           </Flex>
         )}
       </Flex>
-      <Flex direction="column" className="installer-main" style={{ padding: '28px 28px 32px', flex: 1 }}>
+      <Flex
+        direction="column"
+        className="installer-main installer-content-width"
+        style={{ padding: '28px 28px 32px', flex: 1 }}
+      >
         <Outlet />
       </Flex>
     </Flex>

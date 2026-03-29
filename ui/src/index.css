@@ -70,6 +70,14 @@ body.root {
   --g-text-caption-2-line-height: 18px;
 }
 
+/* Cap readable / control width on very wide viewports */
+.installer-content-width {
+  max-width: 1000px;
+  width: 100%;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
 .installer-main {
   font-size: var(--g-text-body-2-font-size);
   line-height: var(--g-text-body-2-line-height);
