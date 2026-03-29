@@ -41,6 +41,7 @@
   "wizard.targets.addressPlaceholder": "Hostname, IP, or host:port",
   "wizard.targets.sshConnectionSection": "SSH connection",
   "wizard.targets.followingDefaultAuth": "Following default block",
+  "wizard.targets.usingDefaultSshSettings": "Using default settings",
   "wizard.targets.keyNotSelected": "not selected",
   "wizard.targets.passwordPlaceholder": "Leave blank to keep using keys or agent",
   "wizard.targets.keyUploadHint": "Private key upload: prototype placeholder — wire to secure storage in production.",
