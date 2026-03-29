@@ -8,7 +8,7 @@ import (
 	"github.com/ydb-platform/ydb-installer/internal/domain"
 )
 
-// NewRouter mounts REST routes (see openapi/openapi.yaml).
+// NewRouter mounts REST routes for the /api/v1 prefix.
 func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)

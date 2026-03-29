@@ -13,7 +13,6 @@ Optional: `git` for fetching the source tree.
 
 - `cmd/installer/` — main package; static UI is embedded from `cmd/installer/web` via `//go:embed all:web`.
 - `ui/` — editable UI sources. Build output is `ui/dist/`.
-- `openapi/` — API contract (not part of the compile, but describes the HTTP surface).
 
 Edit `ui/src` and related UI sources; refresh the embedded tree under `cmd/installer/web` after each production UI build (see below).
 
