@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/ydb-platform/ydb-installer/domain"
-	"github.com/ydb-platform/ydb-installer/storage"
+	"github.com/ydb-platform/ydb-installer/internal/domain"
+	"github.com/ydb-platform/ydb-installer/internal/storage"
 )
 
 // Store is a thread-safe in-memory implementation of storage.Store.

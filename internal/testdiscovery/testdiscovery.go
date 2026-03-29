@@ -4,8 +4,8 @@ package testdiscovery
 import (
 	"context"
 
-	"github.com/ydb-platform/ydb-installer/discovery"
-	"github.com/ydb-platform/ydb-installer/domain"
+	"github.com/ydb-platform/ydb-installer/internal/discovery"
+	"github.com/ydb-platform/ydb-installer/internal/domain"
 )
 
 // Stub is a Discoverer whose behaviour is controlled by test fixtures.

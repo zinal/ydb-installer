@@ -14,13 +14,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ydb-platform/ydb-installer/api"
-	discoverysvc "github.com/ydb-platform/ydb-installer/app/discovery"
-	"github.com/ydb-platform/ydb-installer/app/session"
-	appstub "github.com/ydb-platform/ydb-installer/app/stub"
-	"github.com/ydb-platform/ydb-installer/domain"
-	"github.com/ydb-platform/ydb-installer/security"
-	sqlitestore "github.com/ydb-platform/ydb-installer/storage/sqlite"
+	"github.com/ydb-platform/ydb-installer/internal/api"
+	discoverysvc "github.com/ydb-platform/ydb-installer/internal/app/discovery"
+	"github.com/ydb-platform/ydb-installer/internal/app/session"
+	appstub "github.com/ydb-platform/ydb-installer/internal/app/stub"
+	"github.com/ydb-platform/ydb-installer/internal/domain"
+	"github.com/ydb-platform/ydb-installer/internal/security"
+	sqlitestore "github.com/ydb-platform/ydb-installer/internal/storage/sqlite"
 )
 
 //go:embed all:web
