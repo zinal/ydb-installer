@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Flex, Loader, Stepper, Text } from '@gravity-ui/uikit';
@@ -17,7 +17,7 @@ import { useInstallationSession } from '@/session/InstallationSessionProvider';
 import { useAuthSession } from '@/session/AuthSessionProvider';
 import { wizardSteps } from './wizardSteps';
 import { initialConfigurationDraft, type ConfigurationDraft } from './wizard/configurationDraft';
-import { canReachStep } from './wizard/stepValidation';
+import { canReachStep, hasCommittedOrDraftTargets } from './wizard/stepValidation';
 import { TargetsStep } from './wizard/TargetsStep';
 import { DiscoveryRunStep } from './wizard/DiscoveryRunStep';
 import { DiscoveryResultsStep } from './wizard/DiscoveryResultsStep';
@@ -91,6 +91,7 @@ export function ConfigurationWizard() {
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'targets' });
+  const watchedTargets = useWatch({ control, name: 'targets' });
 
   const session = sessionQuery.data;
   const snapshot = discoveryQuery.data;
@@ -312,15 +313,15 @@ export function ConfigurationWizard() {
   });
 
   const discoveryPhase = session?.phases?.find((p) => p.phaseId === 2);
-  const targetsSaved = (session?.targets?.length ?? 0) > 0;
+  const targetsSaved = hasCommittedOrDraftTargets(session, watchedTargets);
 
   const canNavigateToStep = useCallback(
     (i: number) => {
       if (i < 0 || i >= wizardSteps.length) return false;
       if (configReadOnly) return true;
-      return canReachStep(i, session, snapshot, draft);
+      return canReachStep(i, session, snapshot, draft, watchedTargets);
     },
-    [configReadOnly, session, snapshot, draft],
+    [configReadOnly, session, snapshot, draft, watchedTargets],
   );
 
   const trySetStep = useCallback(
