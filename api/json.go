@@ -20,6 +20,8 @@ func writeAPIError(w http.ResponseWriter, err error) {
 		code = http.StatusNotFound
 	case domain.ErrUnauthorized:
 		code = http.StatusUnauthorized
+	case domain.ErrObserverDisabled:
+		code = http.StatusForbidden
 	case domain.ErrForbidden:
 		code = http.StatusForbidden
 	case domain.ErrConflict:

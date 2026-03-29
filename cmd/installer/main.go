@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -44,10 +45,20 @@ func main() {
 	sessSvc := &session.Service{Store: st}
 	discSvc := &discoverysvc.Service{Store: st}
 	mode := parseMode(*modeFlag)
+	operatorPassword, err := requiredEnv("YDB_INSTALLER_OPERATOR_PASSWORD")
+	if err != nil {
+		log.Fatal(err)
+	}
+	observerPassword := optionalEnv("YDB_INSTALLER_OBSERVER_PASSWORD")
+	if observerPassword == "" {
+		log.Printf("observer authentication: disabled (YDB_INSTALLER_OBSERVER_PASSWORD is not set)")
+	} else {
+		log.Printf("observer authentication: enabled")
+	}
 	auth := security.NewSessionAuth(security.AuthConfig{
 		Mode:             mode,
-		OperatorPassword: envOrDefault("YDB_INSTALLER_OPERATOR_PASSWORD", "operator"),
-		ObserverPassword: envOrDefault("YDB_INSTALLER_OBSERVER_PASSWORD", "observer"),
+		OperatorPassword: operatorPassword,
+		ObserverPassword: observerPassword,
 	})
 	svc := appstub.NewServices(st)
 	deps := api.Deps{
@@ -92,12 +103,17 @@ func defaultDataDir() string {
 	return filepath.Join(".", "data")
 }
 
-func envOrDefault(key, fallback string) string {
+func optionalEnv(key string) string {
 	v := strings.TrimSpace(os.Getenv(key))
-	if v == "" {
-		return fallback
-	}
 	return v
+}
+
+func requiredEnv(key string) (string, error) {
+	v := optionalEnv(key)
+	if v == "" {
+		return "", fmt.Errorf("%s must be set", key)
+	}
+	return v, nil
 }
 
 func defaultMode() string {

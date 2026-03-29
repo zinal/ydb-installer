@@ -89,7 +89,16 @@ func (a *SessionAuth) HasRole(p *Principal, role domain.Role) bool {
 
 func (a *SessionAuth) Login(role domain.Role, password string) (*Principal, string, error) {
 	cred, ok := a.creds[role]
-	if !ok || cred.password == "" || subtleConstantTimeEqual(cred.password, password) == false {
+	if !ok {
+		return nil, "", domain.ErrUnauthorized
+	}
+	if cred.password == "" {
+		if role == domain.RoleObserver {
+			return nil, "", domain.ErrObserverDisabled
+		}
+		return nil, "", domain.ErrUnauthorized
+	}
+	if subtleConstantTimeEqual(cred.password, password) == false {
 		return nil, "", domain.ErrUnauthorized
 	}
 	p := &Principal{
