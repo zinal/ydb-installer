@@ -171,7 +171,7 @@ FROM sessions ORDER BY updated_at DESC LIMIT ? OFFSET ?
 		return nil, err
 	}
 	defer rows.Close()
-	var list []domain.InstallationSession
+	list := make([]domain.InstallationSession, 0)
 	for rows.Next() {
 		var idStr, mode, status string
 		var title sql.NullString

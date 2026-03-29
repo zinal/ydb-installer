@@ -22,7 +22,7 @@ export function HomePage() {
     setLoginError(null);
     try {
       await login(selectedRole, password);
-      let currentSession = (await api.listSessions(1))[0];
+      let currentSession = ((await api.listSessions(1)) ?? [])[0];
       if (!currentSession) {
         currentSession = await api.createSession({ mode: 'interactive', title: t('home.sessionTitle') });
       }

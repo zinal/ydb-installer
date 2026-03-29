@@ -21,7 +21,7 @@ export function InstallationSessionProvider({ children }: { children: ReactNode 
   const q = useQuery({
     queryKey: ['installation-session'],
     queryFn: async () => {
-      const list = await api.listSessions(1);
+      const list = (await api.listSessions(1)) ?? [];
       if (list.length > 0) {
         return list[0];
       }

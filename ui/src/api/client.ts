@@ -152,8 +152,8 @@ export const api = {
 
   me: () => apiFetch<AuthIdentity>('/api/v1/auth/me'),
 
-  listSessions: (limit = 50, offset = 0) =>
-    apiFetch<InstallationSession[]>(`/api/v1/sessions?limit=${limit}&offset=${offset}`),
+  listSessions: async (limit = 50, offset = 0) =>
+    (await apiFetch<InstallationSession[] | null>(`/api/v1/sessions?limit=${limit}&offset=${offset}`)) ?? [],
 
   createSession: (body: { mode: InstallationMode; title?: string }) =>
     apiFetch<InstallationSession>('/api/v1/sessions', {
