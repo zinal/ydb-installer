@@ -11,6 +11,8 @@ type DiscoverySnapshot struct {
 type DiscoveredHost struct {
 	HostID         string             `json:"hostId"`
 	Hostname       string             `json:"hostname"`
+	// TargetAddress is the operator-entered target from session targets (same order as discovery); FR-DISCOVERY-003 UI.
+	TargetAddress  string             `json:"targetAddress,omitempty"`
 	FQDN           string             `json:"fqdn,omitempty"`
 	OSName         string             `json:"osName,omitempty"`
 	OSVersion      string             `json:"osVersion,omitempty"`

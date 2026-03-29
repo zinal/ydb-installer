@@ -50,7 +50,10 @@ func (d SSHDiscoverer) probeOne(ctx context.Context, t domain.TargetHost) domain
 	if hostID == "" {
 		hostID = t.Address
 	}
-	h := domain.DiscoveredHost{HostID: hostID}
+	h := domain.DiscoveredHost{
+		HostID:        hostID,
+		TargetAddress: strings.TrimSpace(t.Address),
+	}
 
 	port := t.Port
 	if port <= 0 {
