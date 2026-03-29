@@ -173,7 +173,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | TLS mode | Select | Operator-provided certs, installer-managed generation, or equivalent (FR-SECURITY-002, FR-SECURITY-003). |
 | Certificate and key material | File upload or path on control host | FR-SECURITY-002; masked display. |
 | Certificate generation parameters | Form fields | Validity, SANs, CA settings as supported (FR-SECURITY-003). |
-| YDB authentication | Toggles and credential capture | FR-SECURITY-006, FR-SECURITY-007; secrets masked. |
+| YDB authentication | Toggles and credential capture | FR-SECURITY-006, FR-SECURITY-007; secrets masked. Credentials captured here are for YDB cluster bootstrap (not Installer UI/REST authentication). |
 
 #### 3.1.8 Step 8 — Artifacts & version (`artifacts`)
 

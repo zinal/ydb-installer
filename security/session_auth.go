@@ -33,9 +33,8 @@ type sessionEntry struct {
 type AuthConfig struct {
 	Mode domain.InstallationMode
 
-	OperatorPassword      string
-	ObserverPassword      string
-	AdministratorPassword string
+	OperatorPassword string
+	ObserverPassword string
 }
 
 // SessionAuth provides startup-credential auth and cookie-backed sessions.
@@ -66,11 +65,6 @@ func NewSessionAuth(cfg AuthConfig) *SessionAuth {
 				username: "observer",
 				password: cfg.ObserverPassword,
 				role:     domain.RoleObserver,
-			},
-			domain.RoleAdministrator: {
-				username: "administrator",
-				password: cfg.AdministratorPassword,
-				role:     domain.RoleAdministrator,
 			},
 		},
 		sessions: make(map[string]sessionEntry),

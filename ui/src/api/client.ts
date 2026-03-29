@@ -20,7 +20,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type InstallationMode = 'interactive' | 'batch';
-export type UserRole = 'operator' | 'observer' | 'administrator';
+export type UserRole = 'operator' | 'observer';
 
 export type PhaseState = 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'cancelled';
 

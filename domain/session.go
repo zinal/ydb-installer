@@ -34,9 +34,8 @@ const (
 type Role string
 
 const (
-	RoleOperator      Role = "operator"
-	RoleAdministrator Role = "administrator"
-	RoleObserver      Role = "observer"
+	RoleOperator Role = "operator"
+	RoleObserver Role = "observer"
 )
 
 // InstallationSession is one persisted workflow instance (§1.4).

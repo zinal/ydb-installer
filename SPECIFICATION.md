@@ -41,6 +41,7 @@ Those sources are referenced as they existed on **2026-03-28**, unless a later r
 - `Compute Node`: a YDB cluster process responsible for database and compute functions. YDB documentation often calls this a `Dynamic Node`. A Compute Node is not a host; it is an OS process on a host in the cluster.
 - `Broker Node`: a YDB cluster process in the role used for coordination and routing as defined by the selected deployment model; the Installer exposes placement and selection of Broker Nodes where the configuration allows.
 - `Control Host`: the environment from which automation runs.
+- `Control Host Administrator`: a person with OS-level administrative privileges on the Control Host who installs and runs the Installer process, manages startup configuration, and controls local secrets and files. This actor is outside the Installer UI/REST role model.
 - `Target Host`: a host on which YDB is to be installed or configured.
 - `Expert Override` (disk selection): an explicit mode that allows the operator to specify block device identifiers manually instead of choosing only from the Discovery Snapshot, subject to warnings and session reporting requirements in §16.
 - `Auto Proceed`: a batch-mode option (declared in the batch specification or equivalent settings) that skips interactive confirmation for destructive steps while preflight validation and other blocking checks still apply unless this document states otherwise for that option.
@@ -133,13 +134,13 @@ FR-MODE-003C. The UI SHALL NOT offer batch-mode configuration overrides.
 
 ### 3.1 Primary Actors
 
-- `Administrator`: manages access to the Installer, secrets, and system-level policies.
-- `Operator`: identity with **execution** privileges (see §3.2). Operator behavior across Installation Modes is defined in §2.5, §6, and §7.
-- `Observer`: identity with **read-only** privileges in **both** **interactive** and **batch** Installation Modes. Observer permissions are defined in §3.2 and related UI requirements.
+- `Control Host Administrator`: OS-level actor who installs and operates the Installer process on the Control Host, including startup credential provisioning and runtime policy management outside the application session UI.
+- `Operator`: authenticated application identity with **execution** privileges (see §3.2). Operator behavior across Installation Modes is defined in §2.5, §6, and §7.
+- `Observer`: authenticated application identity with **read-only** privileges in **both** **interactive** and **batch** Installation Modes. Observer permissions are defined in §3.2 and related UI requirements.
 
 ### 3.2 Permissions
 
-FR-ACCESS-001. The Installer SHALL support role-based access to installation sessions.
+FR-ACCESS-001. The Installer SHALL support role-based access to installation sessions using the application roles **Operator** and **Observer**.
 
 FR-ACCESS-002. The Installer SHALL prevent users without **Operator** (execution) privileges from starting runs, approving destructive actions, **submitting responses to confirmation prompts that gate execution**, cancelling runs, or resuming installation runs.
 
@@ -151,11 +152,11 @@ FR-ACCESS-003B. **Observer** SHALL NOT submit confirmation responses.
 
 FR-ACCESS-003C. **Observer** SHALL NOT invoke execution-control actions reserved for **Operator**.
 
-FR-ACCESS-004. The Installer SHALL provide administrative functions for managing Installer access, credentials bound to roles, and policies consistent with the Administrator role in §3.1.
+FR-ACCESS-004. The Installer SHALL support initialization and reset of **Operator** and **Observer** credentials through startup configuration controlled by the **Control Host Administrator**.
 
-FR-ACCESS-004A. Administrative functions SHALL be exposed through the documented REST API (§17) and MAY additionally be exposed through a dedicated administrative web UI outside the primary session screens listed in §6.4.
+FR-ACCESS-004A. Credential initialization or reset MAY require editing startup configuration and restarting the Installer process; the baseline product SHALL NOT require an in-application Administrator role for this function.
 
-FR-ACCESS-004B. At minimum, administrative functions SHALL cover identity management, credential initialization or reset, role assignment, and system-level access-policy management.
+FR-ACCESS-004B. The product documentation SHALL describe the operating procedure for the **Control Host Administrator** to provision or rotate **Operator** and **Observer** credentials.
 
 FR-ACCESS-005. **Operator** SHALL be permitted to edit installation configuration through the configuration steps only when the Installer process runs in interactive Installation Mode (FR-MODE-003).
 
@@ -580,7 +581,7 @@ FR-SECURITY-004. The Installer SHALL validate that supplied TLS assets are struc
 
 FR-SECURITY-005. The Installer SHALL protect its UI and REST API with HTTP Basic authentication (or a successor scheme documented alongside the REST API).
 
-FR-SECURITY-005A. User identities SHALL map to the roles in §3.1.
+FR-SECURITY-005A. Authenticated application identities SHALL map only to the **Operator** and **Observer** roles in §3.1.
 
 FR-SECURITY-005B. Operator and Observer credentials for UI and REST API access SHALL be supplied through the mandatory application configuration file used at startup.
 
@@ -590,13 +591,13 @@ FR-SECURITY-005CA. Installation Mode SHALL be independent of authenticated role.
 
 FR-SECURITY-005D. **Operator** and **Observer** identities SHALL be available in both Installation Modes, subject to §3.2.
 
-FR-SECURITY-005E. Administrative actions SHALL be available only to identities with Administrator privileges.
+FR-SECURITY-005E. The Installer SHALL NOT require a separate authenticated Administrator application identity for UI or REST API authorization.
 
 FR-SECURITY-005F. Execution privileges SHALL follow FR-ACCESS-002.
 
 FR-SECURITY-006. The Installer SHALL support installation with YDB user authentication enabled.
 
-FR-SECURITY-007. The Installer SHALL support capturing or importing the initial administrator credentials required for installation.
+FR-SECURITY-007. When YDB user authentication is enabled, the Installer SHALL support capturing or importing the initial YDB administrator credentials required for cluster installation.
 
 FR-SECURITY-008. The Installer SHALL prevent secrets from appearing in clear text in routine logs and progress views.
 
@@ -828,7 +829,7 @@ FR-API-002. The REST API SHALL cover at minimum:
 - configuration creation, import, update, retrieval, and export;
 - validation execution and retrieval of validation results, including validation-only or dry-run invocation required by FR-USABILITY-003;
 - execution start, progress retrieval, cancellation request, rerun or resume request, and status retrieval;
-- administrative functions required by FR-ACCESS-004;
+- authentication/session operations for **Operator** and **Observer** access, consistent with §10.2 and FR-ACCESS-004;
 - access to logs, reports, and persisted artifacts;
 - data needed for presets, supported options, and reference metadata in the UI.
 

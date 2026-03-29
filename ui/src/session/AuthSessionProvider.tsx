@@ -19,7 +19,6 @@ function deriveRole(identity: AuthIdentity | null): UserRole | null {
   if (!identity?.roles?.length) return null;
   if (identity.roles.includes('operator')) return 'operator';
   if (identity.roles.includes('observer')) return 'observer';
-  if (identity.roles.includes('administrator')) return 'administrator';
   return identity.roles[0] ?? null;
 }
 

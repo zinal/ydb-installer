@@ -10,7 +10,7 @@
   "nav.results": "Results",
   "nav.logout": "Logout",
   "auth.signIn": "Sign in",
-  "auth.signInHint": "Obtain the login credentials from the Administrator who configured this installer session.",
+  "auth.signInHint": "Obtain the login credentials from the control-host administrator who configured this installer session.",
   "auth.password": "Password",
   "auth.submit": "Sign in",
   "auth.signedInAs": "Signed in as",

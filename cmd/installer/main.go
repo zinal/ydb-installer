@@ -45,10 +45,9 @@ func main() {
 	discSvc := &discoverysvc.Service{Store: st}
 	mode := parseMode(*modeFlag)
 	auth := security.NewSessionAuth(security.AuthConfig{
-		Mode:                  mode,
-		OperatorPassword:      envOrDefault("YDB_INSTALLER_OPERATOR_PASSWORD", "operator"),
-		ObserverPassword:      envOrDefault("YDB_INSTALLER_OBSERVER_PASSWORD", "observer"),
-		AdministratorPassword: envOrDefault("YDB_INSTALLER_ADMIN_PASSWORD", "admin"),
+		Mode:             mode,
+		OperatorPassword: envOrDefault("YDB_INSTALLER_OPERATOR_PASSWORD", "operator"),
+		ObserverPassword: envOrDefault("YDB_INSTALLER_OBSERVER_PASSWORD", "observer"),
 	})
 	svc := appstub.NewServices(st)
 	deps := api.Deps{
