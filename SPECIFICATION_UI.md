@@ -16,13 +16,54 @@ This document describes **how the web user interface implements** the normative 
 
 ## 2. Primary screens and illustrative routes
 
-The normative screen matrix (routes, purposes, **Operator** vs **Observer** capabilities) is **`SPECIFICATION.md` §6.4**, together with FR-INTERACTIVE-014–FR-INTERACTIVE-017, FR-ACCESS-003, and FR-UI-005.
+This section elaborates the primary session screens referenced by **`SPECIFICATION.md`** §6.4, together with FR-INTERACTIVE-014–FR-INTERACTIVE-017, FR-ACCESS-003, and FR-UI-005.
 
 **Implementation notes:** Path names in **`SPECIFICATION.md`** are illustrative; equivalent routing is permitted (FR-INTERACTIVE-011). Keep navigation affordances for Home, Configuration, Monitoring, Logs, and Logout consistent with FR-INTERACTIVE-017 and role rules in **`SPECIFICATION.md`** §3.2.
+
+Authentication, REST API usage, and authorization rules follow **`SPECIFICATION.md`** §3.2, §10.2, and §17.
+
+| Screen | Route (illustrative) | Purpose | Operator controls | Observer controls |
+|--------|----------------------|---------|-------------------|-------------------|
+| Home | `/` | Authentication and session-entry screen with role switch and credentials; after authentication, it shows the current session identity and entry points to workflow screens. | Authenticate as **Operator**; navigate to Configuration, Monitoring, and Logs; use actions permitted by role and mode. | Authenticate as **Observer**; navigate to Configuration, Monitoring, and Logs; read-only access only. |
+| Configuration | `/configuration` | Multi-step session workflow, including configuration, review, and run-state step 11. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
+| Monitoring | `/monitoring` | Live or polled progress, phase and task detail, run state, and failure context. | Read run state; request cancel or resume through documented UI controls when the session state allows and the user is authorized. | Read run state only; no cancel, resume, or other execution-control actions. |
+| Logs | `/logs` | Session log view with filtering and historical browsing for installation logs. | Read logs; use filters; export or download logs where available. | Read logs with the same filtering and navigation in read-only form; no operator-only execution controls. |
+| Logout | `/logout` | Terminate access to the application. | End the authenticated session and return to the Home screen. | Same as for **Operator**. |
+
+### 2.1 Workflow and screen alignment
+
+This mapping elaborates the relationship between the workflow phases in **`SPECIFICATION.md`** §4 and the UI views described in this companion.
+
+| Workflow phase | Primary UI step or view | Notes |
+|----------------|-------------------------|-------|
+| 1. target definition | Step 1 `targets` | Initial session target and access definition. |
+| 2. discovery | Step 2 `discovery_run` and step 3 `discovery_results` | Discovery execution and review of the resulting snapshot. |
+| 3. configuration input or import | Steps 4-9 in interactive mode; read-only projection of steps 1-10 in batch mode | Interactive mode captures configuration input; batch mode presents imported configuration. |
+| 4. preflight validation | Transition from step 9 into step 10 | Validation may be automatic or explicit per FR-INTERACTIVE-028A. |
+| 5. review and approval | Step 10 `review` | Destructive-scope approval and execution start gate. |
+| 6-13. execution through reporting | Step 11 `run_state`, `/monitoring`, and `/logs` | Execution-time interaction, confirmation prompts, run control, monitoring, logs, and final reporting. |
 
 ---
 
 ## 3. Per-step form controls
+
+### 3.0 Step identifiers and labels
+
+The step identifiers and English labels referenced by **`SPECIFICATION.md`** §6.5 are:
+
+| Step | Id | Label (English) |
+|------|-----|-----------------|
+| 1 | `targets` | Target definition |
+| 2 | `discovery_run` | Discovery |
+| 3 | `discovery_results` | Discovery results |
+| 4 | `layout` | Cluster layout |
+| 5 | `storage` | Disk selection |
+| 6 | `network` | Network & endpoints |
+| 7 | `security` | Security & TLS |
+| 8 | `artifacts` | Artifacts & version |
+| 9 | `database` | Database settings |
+| 10 | `review` | Review & approval |
+| 11 | `run_state` | Run state & confirmations |
 
 ### 3.1 Form definitions (by configuration step)
 
@@ -42,7 +83,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | SSH auth mode | Selection | Per row: use default profile, password, secret key, or SSH agent. Required per row. |
 | SSH user | Text | Login user for SSH. MAY be left empty; in read-only summaries the UI SHALL show a localized operator-facing phrase (English resource example: **Unconfigured (using SSH default)**) rather than a blank or placeholder dash, loaded from UI language resources (FR-I18N-001). |
 | SSH password | Password text | Password for SSH. Required for the edited row when password mode is selected. |
-| SSH key | Upload control | Private key for SSH. Required for the edited row when secret key mode is selected (prototype behavior as implemented). |
+| SSH key | Upload control | Private key for SSH. Required for the edited row when secret key mode is selected. |
 | Add / Remove / Edit | Buttons | **Add** appends a row; **Remove** deletes a row and updates persisted targets when committed per product rules; **Edit** opens per-row settings (address, port when applicable, user, auth mode, secrets). |
 | Default SSH authentication | Block | Same SSH fields as a custom row except there is no “use default” auth option. Shown read-only with an **Edit** action for **Operator**; **Done** commits changes to the draft/session per implementation. |
 | Persist targets | Commits | Target list persistence to the session SHALL occur on explicit commits (for example **Done** on the default SSH block, **Done** on the per-row edit dialog, and row removal that updates server state), satisfying FR-INTERACTIVE-024 and FR-INTERACTIVE-024A. There is no separate **Save targets** control in the current UI shape. |
@@ -75,7 +116,8 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Control | Type | Semantics |
 |---------|------|-----------|
 | Host inventory table or cards | Read-only grid | Hostname, FQDN, OS, hardware summary, disk inventory columns, per-host discovery errors (FR-DISCOVERY-003, FR-DISCOVERY-007). |
-| Continue to configuration | Primary action | Moves to layout when the operator is ready; the UI can warn if critical hosts failed discovery. |
+| Acknowledge discovery results | Checkbox or equivalent explicit action | Records the acknowledgment required by FR-INTERACTIVE-026A before the operator leaves this step. |
+| Continue to cluster layout | Primary action | Moves to layout only after the acknowledgment requirement is satisfied; the UI can warn if critical hosts failed discovery. |
 
 #### 3.1.4 Step 4 — Cluster layout (`layout`)
 
@@ -167,7 +209,8 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Control | Type | Semantics |
 |---------|------|-----------|
 | Configuration summary | Read-only sections | Hosts, topology, disks, security, artifacts. |
-| Validation results | Read-only panel | Shows latest preflight result summary with blocking vs warning classification (FR-VALIDATION-003). |
+| Validation results | Read-only panel | Shows latest preflight result summary with blocking, warning, and informational classifications (FR-VALIDATION-003). |
+| Run preflight / refresh validation | Button or automatic transition trigger | Invokes the preflight required before entry to review when the UI does not trigger it automatically on leaving step 9. |
 | Approve destructive actions | Checkbox or typed confirmation | Identifies affected hosts and disks (FR-STORAGE-012). |
 | Start installation / Proceed | Primary button | Available only when blocking errors are cleared and required destructive confirmations are completed. |
 
@@ -182,6 +225,8 @@ Each subsection describes **one configuration-step form**: its role in the workf
 | Current run state summary | Read-only panel | Current phase/task, session status, elapsed time, and high-level warnings/errors (FR-MONITORING-002). |
 | Pending confirmation requests | List | Shows active confirmation prompts that gate execution, including scope and consequence summary. |
 | Confirmation response controls | Buttons or form actions (authorized roles) | Allow **Operator** to submit required responses; **Observer** sees state only (FR-ACCESS-002, FR-ACCESS-003, FR-UI-009). |
+| Resume or rerun from checkpoint | Button (authorized roles, when eligible) | Allows **Operator** to invoke documented rerun or resume behavior when FR-RUNCONTROL-008 eligibility conditions are met. |
+| Accept degraded completion | Confirmation control (authorized roles, when applicable) | Allows **Operator** to accept completion with failed or incomplete verification checks only after the UI lists the exceptions that would otherwise block normal completion (FR-EXECUTION-014). |
 | Open Monitoring | Link or button | Navigates to `/monitoring` for detailed progress timeline and host/task status. |
 | Open Logs | Link or button | Navigates to `/logs` for detailed installation logs. |
 
@@ -193,7 +238,7 @@ Section references such as §6.5, §5, §8, §9, §10, §11, §12, or §13 in th
 
 ### 4.1 Execution monitoring screen
 
-**Description.** Satisfies FR-MONITORING-001–FR-MONITORING-003 and FR-RUNCONTROL-001: current phase and task, per-host state, elapsed time, log tail, warnings and errors, cancellation, and bridge-vs-base distinction where applicable.
+**Description.** Satisfies FR-MONITORING-001–FR-MONITORING-003, FR-RUNCONTROL-001, and FR-RUNCONTROL-008: current phase and task, per-host state, elapsed time, overall completion estimate when available, log tail, warnings and errors, cancellation, rerun or resume when eligible, completion-report access, and bridge-vs-base distinction where applicable.
 
 **Input controls.**
 
@@ -201,10 +246,12 @@ Section references such as §6.5, §5, §8, §9, §10, §11, §12, or §13 in th
 |---------|------|-----------|
 | Phase and task display | Read-only text / timeline | FR-MONITORING-002. |
 | Host list with status | Table or list | FR-MONITORING-002. |
+| Overall completion estimate | Read-only indicator | Shows overall completion estimate when the backend can provide it (FR-MONITORING-002). |
 | Log viewer | Scrollable text with severity | FR-MONITORING-002; secrets redacted. |
 | Filter by host / phase / severity | Select or toggles | FR-UI-006. |
 | Cancel run | Button (authorized roles) | FR-RUNCONTROL-001; cooperative cancel (FR-RUNCONTROL-002–FR-RUNCONTROL-005). |
-| Export / download logs or report | Links | When FR-REPORTING applies post-run. |
+| Resume or rerun | Button (authorized roles, when eligible) | Exposed only when the backend reports that rerun or resume is implemented and currently allowed for the session (FR-RUNCONTROL-008, FR-RUNCONTROL-009). |
+| View or export completion report | Link or button | Opens or exports the completion report and final session report when FR-REPORTING applies post-run. |
 
 ### 4.2 Logs screen
 
@@ -220,7 +267,7 @@ Section references such as §6.5, §5, §8, §9, §10, §11, §12, or §13 in th
 | Download or export logs | Link or button | Exports logs for reporting and troubleshooting (FR-REPORTING-002, FR-REPORTING-006). |
 | Back to run state or monitor | Link or button | Returns to `/configuration` step 11 or `/monitoring` without losing session context. |
 
-These views implement FR-MONITORING-001–FR-MONITORING-003, FR-MONITORING-005, FR-RUNCONTROL-001, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as cited in the tables, together with **SPECIFICATION.md** §6.8.
+These views implement FR-MONITORING-001–FR-MONITORING-003, FR-MONITORING-005, FR-RUNCONTROL-001, FR-RUNCONTROL-008, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as cited in the tables, together with **SPECIFICATION.md** §6.8.
 
 ---
 
@@ -243,7 +290,8 @@ This section elaborates **SPECIFICATION.md** §6.7 (normative interaction rules)
 
 ## 6. UI implementation notes (non-normative)
 
-- **Step strip and deep linking:** FR-INTERACTIVE-021, FR-INTERACTIVE-021A, FR-INTERACTIVE-031B, and FR-INTERACTIVE-031C constrain step presentation, URL query parameters, and SPA fallback routing; align component behavior with **`ydb-platform/ydb-ui-components`** (FR-TECH-002, **SPECIFICATION.md** §18).
+- **Step strip and deep linking:** FR-INTERACTIVE-021, FR-INTERACTIVE-021A, FR-INTERACTIVE-031B, and FR-INTERACTIVE-031C constrain step presentation, URL query parameters, and SPA fallback routing; align component behavior with **`ydb-platform/ydb-ui-components`** and keep completed steps visibly completed even when selected.
+- **Target commit affordances:** Where the UI requires explicit commit before discovery, implementation examples include a **Done** action on the default SSH block, a **Done** action on the per-row edit dialog, and row removal that writes the new target set to the server (FR-INTERACTIVE-024A).
 - **Localization:** Load operator-visible strings from locale resources per FR-I18N-001–FR-I18N-003; never use the backend binary as the sole source of localized UI text (FR-I18N-003A).
 - **Secrets:** Mask secrets in forms and logs per FR-SECURITY-008 and FR-USABILITY-005.
 

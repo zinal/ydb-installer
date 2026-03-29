@@ -19,20 +19,11 @@ It does not prescribe low-level implementation details of the automation backend
 
 ### 1.3 Source Basis
 
-This specification draws on the following sources:
-
-- YDB manual deployment documentation;
-- YDB Ansible deployment documentation;
-- the `ydb-platform/ydb-ansible` repository: README, playbooks, and role behavior;
-- the `ydbops` tool and its source repository, when available, as a reference for reusable deployment logic;
-- the [`ydb-platform/ydb-ui-components`](https://github.com/ydb-platform/ydb-ui-components) repository for the UI component library;
-- the [`ydb-platform/ydb-embedded-ui`](https://github.com/ydb-platform/ydb-embedded-ui) repository as the reference source of `ydb-ui-components` usage examples and integration patterns.
+This specification draws on YDB deployment documentation, the `ydb-platform/ydb-ansible` repository as a behavioral reference, the `ydbops` tool and source repository as a reusable-deployment reference, and the [`ydb-platform/ydb-ui-components`](https://github.com/ydb-platform/ydb-ui-components) and [`ydb-platform/ydb-embedded-ui`](https://github.com/ydb-platform/ydb-embedded-ui) repositories as UI references.
 
 FR-DOC-001. The project SHALL maintain a reference index (URLs, release identifiers, or pinned repository revisions) and update it when upstream materials change in ways that affect the Installer's behavior.
 
-The content of those sources is referenced as it existed on **2026-03-28**, unless a later revision of this document states otherwise.
-
-Automation sources listed in this subsection are behavioral and domain references. Their inclusion does not imply a requirement to reuse `Ansible`-based or `Python`-based automation in the Installer implementation.
+Those sources are referenced as they existed on **2026-03-28**, unless a later revision states otherwise. Their inclusion does not imply a requirement to reuse `Ansible`-based or `Python`-based automation in the Installer implementation.
 
 ### 1.4 Definitions
 
@@ -51,7 +42,7 @@ Automation sources listed in this subsection are behavioral and domain reference
 - `Broker Node`: a YDB cluster process in the role used for coordination and routing as defined by the selected deployment model; the Installer exposes placement and selection of Broker Nodes where the configuration allows.
 - `Control Host`: the environment from which automation runs.
 - `Target Host`: a host on which YDB is to be installed or configured.
-- `Expert Override` (disk selection): an explicit mode that allows the operator to specify block device identifiers manually instead of choosing only from the Discovery Snapshot, subject to warnings and any audit requirements stated elsewhere in this document.
+- `Expert Override` (disk selection): an explicit mode that allows the operator to specify block device identifiers manually instead of choosing only from the Discovery Snapshot, subject to warnings and session reporting requirements in §16.
 - `Auto Proceed`: a batch-mode option (declared in the batch specification or equivalent settings) that skips interactive confirmation for destructive steps while preflight validation and other blocking checks still apply unless this document states otherwise for that option.
 - `Degraded Completion State`: a session outcome in which the operator explicitly accepts completion despite failed or incomplete verification checks; the Installer records which checks did not pass and the fact of operator acceptance.
 - `Copy-and-Use Deployment Model`: a distribution and operating model in which the Installer can be copied or unpacked onto a single Control Host and used without mandatory external infrastructure services such as a separate database, workflow engine, message broker, or secret manager for baseline operation.
@@ -118,11 +109,11 @@ FR-TECH-009A. If transitional compatibility requires invoking external helper ex
 
 ### 2.5 Installation Mode Selection (Command Line)
 
-The Installer is a long-running service whose **Installation Mode** is fixed when the process starts. Operators choose **interactive** or **batch** by passing documented command-line flags or arguments to the server executable; configuration files can supply default flag values as specified in the requirements below.
+The Installer is a long-running service whose **Installation Mode** is fixed when the process starts. Operators choose **interactive** or **batch** by passing documented command-line flags or arguments to the server executable together with the mandatory application configuration file.
 
 FR-MODE-001. The Installer SHALL determine **interactive** or **batch** Installation Mode at **process startup** through **command-line invocation** of the server (flags or equivalent).
 
-FR-MODE-001A. Flag values MAY be read from a configuration file when that file is explicitly referenced by the command line or by an equally explicit startup contract documented for the product.
+FR-MODE-001A. Startup parameters SHALL be readable from the mandatory application configuration file referenced by the command line or by an equally explicit startup contract documented for the product.
 
 FR-MODE-001B. The Installation Mode SHALL NOT be changed at runtime for a running Installer process.
 
@@ -161,6 +152,10 @@ FR-ACCESS-003B. **Observer** SHALL NOT submit confirmation responses.
 FR-ACCESS-003C. **Observer** SHALL NOT invoke execution-control actions reserved for **Operator**.
 
 FR-ACCESS-004. The Installer SHALL provide administrative functions for managing Installer access, credentials bound to roles, and policies consistent with the Administrator role in §3.1.
+
+FR-ACCESS-004A. Administrative functions SHALL be exposed through the documented REST API (§17) and MAY additionally be exposed through a dedicated administrative web UI outside the primary session screens listed in §6.4.
+
+FR-ACCESS-004B. At minimum, administrative functions SHALL cover identity management, credential initialization or reset, role assignment, and system-level access-policy management.
 
 FR-ACCESS-005. **Operator** SHALL be permitted to edit installation configuration through the configuration steps only when the Installer process runs in interactive Installation Mode (FR-MODE-003).
 
@@ -205,6 +200,8 @@ FR-WORKFLOW-007. The Installer SHALL NOT permit disk formatting, repartitioning,
 ### 4.3 Phase Alignment
 
 Preflight validation (§12) corresponds to phase 4 above. Review and approval (phase 5) precedes host preparation and subsequent steps that change target systems.
+
+The workflow-to-UI mapping for interactive and batch views appears in **SPECIFICATION_UI.md** §2.
 
 ## 5. Discovery and Reference Information Collection
 
@@ -299,7 +296,7 @@ FR-INTERACTIVE-005. The configuration-step workflow SHALL provide screens or equ
 - database settings;
 - review and approval.
 
-The configuration-step sequence and transition rules appear in §6.5; batch presentation rules appear in §6.7; per-step form control inventories appear in **SPECIFICATION_UI.md** §3 (with FR-INTERACTIVE-009 and FR-INTERACTIVE-009B). Monitoring and Logs presentation is required by §6.8 and detailed in **SPECIFICATION_UI.md** §4 (FR-INTERACTIVE-010). In **batch** Installation Mode, the configuration-step forms represent a pre-filled read-only projection of the effective batch specification except for confirmation and run-control actions explicitly allowed elsewhere in this specification.
+The configuration-step sequence and transition rules appear in §6.5. Per-step controls appear in **SPECIFICATION_UI.md** §3. Monitoring and Logs presentation appears in **SPECIFICATION_UI.md** §4. In **batch** Installation Mode, the same structure presents a read-only projection of the effective batch configuration except for confirmation and run-control actions allowed elsewhere in this specification.
 
 FR-INTERACTIVE-006. In **interactive** Installation Mode, the configuration-step workflow SHALL validate user input before advancing to the next step.
 
@@ -336,25 +333,13 @@ FR-INTERACTIVE-012. The screen set SHALL be the same for both **Operator** and *
 
 FR-INTERACTIVE-013. Role differences in the UI SHALL be implemented through control availability rather than through separate role-specific screens.
 
-Path names in this subsection are illustrative and may be implemented with equivalent routing.
-
 FR-INTERACTIVE-014. Home (`/`) SHALL be the authentication entry screen.
 
 FR-INTERACTIVE-015. Home SHALL provide a role selector (`Operator` or `Observer`) and the credential entry required for that role, including password input when the authentication scheme uses passwords.
 
 FR-INTERACTIVE-015A. Username input MAY be shown when the configured authentication scheme requires it. When the scheme does not require a username or equivalent identity field, the Home screen SHALL omit it.
 
-FR-INTERACTIVE-015B. Until full authentication integration is available, the UI prototype MAY persist the role selected on the Home screen (`Operator` vs `Observer`) in browser `sessionStorage` so a full page reload does not reset role affordances until the operator uses **Logout** or equivalent.
-
 FR-INTERACTIVE-016. Switching roles from an active session SHALL require re-authentication for the selected role, consistent with §10.2.
-
-| Screen | Route (illustrative) | Purpose | Operator controls | Observer controls |
-|--------|----------------------|---------|-------------------|-------------------|
-| Home | `/` | Authentication and session-entry screen with role switch and credentials; after authentication, it shows the current session identity and entry points to workflow screens. | Authenticate as **Operator**; navigate to Configuration, Monitoring, and Logs; use actions permitted by role and mode. | Authenticate as **Observer**; navigate to Configuration, Monitoring, and Logs; read-only access only. |
-| Configuration | `/configuration` | Multi-step session workflow (§6.5–§6.7; batch rules §6.7), including configuration, review, and run-state step 11. | In **interactive** mode: edit configuration steps and execute allowed actions. In **batch** mode, or after installation has started: configuration is pre-filled and read-only. | Same steps visible in read-only form; no configuration edits, no confirmation submissions, and no execution-control actions. |
-| Monitoring | `/monitoring` | Live or polled progress, phase and task detail, run state, and failure context (§14, §15). | Read run state; request cancel/resume where authorized by policy and implementation. | Read run state only; no cancel/resume or other execution-control actions. |
-| Logs | `/logs` | Session log view with filtering and historical browsing for installation logs (**SPECIFICATION_UI.md** §4.2, §14). | Read logs; use filters; export/download logs where available. | Read logs with same filtering/navigation in read-only form; no operator-only execution controls. |
-| Logout | `/logout` | Terminate access to the application. | End the authenticated session and return to the Home screen. | Same as for **Operator**. |
 
 FR-INTERACTIVE-017. Navigation links for Home, Configuration, Monitoring, Logs, and Logout SHALL be available from every screen.
 
@@ -362,7 +347,7 @@ FR-INTERACTIVE-018. Opening Logs MAY use a dedicated browser window or tab.
 
 FR-INTERACTIVE-018A. When Logs is opened in a dedicated browser window or tab, the current Configuration or Monitoring context SHALL remain intact in the originating window.
 
-Role-specific control availability follows the matrix above and FR-ACCESS-002, FR-ACCESS-003, and FR-UI-009. Draft configuration retention in interactive mode is defined by FR-INTERACTIVE-004 and FR-INTERACTIVE-004A.
+Detailed route, screen, and role-capability inventories appear in **SPECIFICATION_UI.md** §2. Draft retention in interactive mode follows FR-INTERACTIVE-004 and FR-INTERACTIVE-004A.
 
 ### 6.5 Interactive Configuration Steps: Expected Step Sequence and Transitions
 
@@ -372,31 +357,17 @@ FR-INTERACTIVE-020. Step identifiers SHALL be stable product labels.
 
 FR-INTERACTIVE-021. The UI SHALL show configuration steps as tabs or breadcrumbs at the top of the screen, using readable labels.
 
-FR-INTERACTIVE-021A. The step strip SHALL distinguish completed or satisfied steps from not-yet-reached steps using stable iconography (for example success versus idle). Re-selecting a completed step SHALL NOT present it as unstarted solely because it is the active selection; presentation SHALL preserve semantic step state (including mitigating component styling that would otherwise obscure success state on the selected step).
+FR-INTERACTIVE-021A. The step strip SHALL distinguish completed or satisfied steps from not-yet-reached steps using stable iconography, and selecting a completed step SHALL preserve its semantic completed state.
 
-| Step | Id | Label (English) |
-|------|-----|-----------------|
-| 1 | `targets` | Target definition |
-| 2 | `discovery_run` | Discovery |
-| 3 | `discovery_results` | Discovery results |
-| 4 | `layout` | Cluster layout |
-| 5 | `storage` | Disk selection |
-| 6 | `network` | Network & endpoints |
-| 7 | `security` | Security & TLS |
-| 8 | `artifacts` | Artifacts & version |
-| 9 | `database` | Database settings |
-| 10 | `review` | Review & approval |
-| 11 | `run_state` | Run state & confirmations |
+Stable step identifiers and English labels appear in **SPECIFICATION_UI.md** §3.
 
 FR-INTERACTIVE-022. The default forward path SHALL advance in order as **1 → 2 → 3 → 4 → ... → 10 → 11**.
 
 FR-INTERACTIVE-023. Back from any step SHALL return to the immediately previous step without discarding saved draft data unless the operator explicitly discards a session.
 
-**Transition rules.**
-
 FR-INTERACTIVE-024. Transition from step 1 to step 2 SHALL be allowed only after the target list is saved and contains at least one valid target address.
 
-FR-INTERACTIVE-024A. The UI SHOULD require an explicit **commit** of target edits before transition from step 1 to step 2 so that server state matches the form (for example **Done** on the default SSH block, **Done** on the per-row edit dialog, or row removal that updates the session on the server), rather than relying on implicit autosave alone.
+FR-INTERACTIVE-024A. The UI SHOULD require an explicit commit of target edits before transition from step 1 to step 2 so that server state matches the form rather than relying on implicit autosave alone.
 
 FR-INTERACTIVE-025. Running discovery SHALL require saved targets.
 
@@ -406,7 +377,7 @@ FR-INTERACTIVE-025B. The operator MAY open step 3 when a discovery snapshot alre
 
 FR-INTERACTIVE-026. Transition from step 3 to step 4 SHALL be allowed once a discovery snapshot is available for review, even if some hosts failed discovery as allowed by FR-DISCOVERY-004.
 
-FR-INTERACTIVE-026A. The operator SHALL acknowledge discovery results before proceeding from step 3 to step 4.
+FR-INTERACTIVE-026A. The operator SHALL acknowledge discovery results before proceeding from step 3 to step 4 through an explicit acknowledgment control or an equivalent explicit continue action that records the acknowledgment.
 
 FR-INTERACTIVE-027. Forward navigation through steps 4 to 9 SHALL run step validation before leaving a step that has required fields (FR-INTERACTIVE-006).
 
@@ -426,9 +397,9 @@ FR-INTERACTIVE-031. The operator MAY open Monitoring or Home while configuration
 
 FR-INTERACTIVE-031A. The step strip SHOULD reflect persisted progress when returning to `/configuration`, including furthest-step progress retained in browser session storage keyed to the installation session where needed so success markers survive reload or remount.
 
-FR-INTERACTIVE-031B. The `/configuration` URL SHALL carry the active step index in a query parameter (for example `?step=`) kept in sync with navigation so the address bar reflects the current step and deep links can be shared.
+FR-INTERACTIVE-031B. The `/configuration` URL SHALL carry the active step index in a query parameter kept in sync with navigation so the address bar reflects the current step and deep links can be shared.
 
-FR-INTERACTIVE-031C. When the web UI is served from the Installer’s embedded static files, HTTP GET requests for paths that are not static assets under the UI mount SHALL be served the SPA entry document so browser reload on client-routed paths (such as `/configuration` or `/configuration?step=3`) does not return `404 Not Found`.
+FR-INTERACTIVE-031C. When the web UI is served from the Installer’s embedded static files, HTTP GET requests for client-routed paths that are not static assets under the UI mount SHALL be served the SPA entry document so browser reload does not return `404 Not Found`.
 
 
 ### 6.6 Configuration step forms: control inventories
@@ -437,20 +408,11 @@ Per-step control inventories (field types, grouping, and semantics) appear in **
 
 ### 6.7 Batch-mode configuration presentation
 
-**Description.** In **batch** Installation Mode, the UI uses the same `/configuration` route and step structure as §6.5 and the read-only projection rules below. There is no separate batch configuration screen or route.
-
-**Interaction rules.**
-
-| Rule | Semantics |
-|------|-----------|
-| Batch data source | Session configuration values come from the loaded batch specification and its validated effective form (FR-BATCH-001–FR-BATCH-004). |
-| No configuration overrides | Configuration-step controls for targets, topology, storage, network, security, artifacts, and database settings are pre-filled and read-only in **batch** mode (FR-MODE-003, FR-ACCESS-005). |
-| Allowed actions | Users with **Operator** privileges can provide required confirmation responses and run-control actions where **SPECIFICATION.md** allows them (FR-ACCESS-002, FR-BATCH-008A, §15). |
-| Visibility | The UI indicates that values are batch-sourced, pre-filled, and non-editable for the running session (FR-BATCH-001A). |
+In **batch** Installation Mode, the UI uses the same `/configuration` route and step structure as §6.5 to present the effective batch configuration in read-only form, with only the confirmation and run-control actions allowed elsewhere in this specification. Detailed UI presentation appears in **SPECIFICATION_UI.md** §5.
 
 ### 6.8 Monitoring and Logs views
 
-Detailed **presentation** for the execution monitoring screen and the dedicated logs screen—including control inventories, filtering affordances, and navigation patterns—is specified in **SPECIFICATION_UI.md** §4, implementing FR-MONITORING-001–FR-MONITORING-005, FR-MONITORING-006, FR-RUNCONTROL-001, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as applicable.
+Detailed **presentation** for the execution monitoring screen and the dedicated logs screen—including control inventories, filtering affordances, and navigation patterns—is specified in **SPECIFICATION_UI.md** §4, implementing FR-MONITORING-001–FR-MONITORING-005, FR-MONITORING-006, FR-RUNCONTROL-001, FR-RUNCONTROL-008, FR-SECURITY-008, FR-USABILITY-005, and FR-UI-006 as applicable.
 
 
 ## 7. Batch Installation Mode
@@ -469,13 +431,13 @@ FR-BATCH-004. The Installer SHALL validate the batch specification after load an
 
 ### 7.2 Batch Execution Management
 
-FR-BATCH-005. A batch installation run SHALL be visible through the same web UI used for interactive runs.
+FR-BATCH-005. A batch installation run SHALL be visible through the shared UI defined in §6.
 
-FR-BATCH-005A. A batch installation run SHALL be controllable there by authorized users.
+FR-BATCH-005A. Authorized users SHALL be able to monitor and control a batch run through those shared views where this specification allows.
 
-FR-BATCH-005B. Batch runs SHALL use the shared Home, Configuration steps (pre-filled read-only in batch mode), Monitoring, and Logs views.
+FR-BATCH-005B. Batch runs SHALL use the shared Home, Configuration, Monitoring, and Logs views, with Configuration read-only except where this specification explicitly allows otherwise.
 
-FR-BATCH-006. The Installer SHALL display live phase progress, logs, warnings, and failures for batch runs.
+FR-BATCH-006. Those shared views SHALL display live phase progress, logs, warnings, and failures for batch runs.
 
 FR-BATCH-007. The Installer SHALL support starting a batch run from a declarative specification supplied through documented startup or API mechanisms, including at minimum:
 
@@ -620,7 +582,7 @@ FR-SECURITY-005. The Installer SHALL protect its UI and REST API with HTTP Basic
 
 FR-SECURITY-005A. User identities SHALL map to the roles in §3.1.
 
-FR-SECURITY-005B. Initial credentials SHALL be supplied through Installer startup configuration.
+FR-SECURITY-005B. Operator and Observer credentials for UI and REST API access SHALL be supplied through the mandatory application configuration file used at startup.
 
 FR-SECURITY-005C. Installation Mode (interactive vs batch) SHALL be selected only at process startup (FR-MODE-001).
 
@@ -766,6 +728,10 @@ FR-EXECUTION-013. When bridge mode is enabled, the Installer SHALL include verif
 
 FR-EXECUTION-014. The Installer SHALL mark the installation session completed only when required verification checks succeed, or when the operator explicitly accepts a **Degraded Completion State** as defined in §1.4.
 
+FR-EXECUTION-014A. Accepting a **Degraded Completion State** SHALL require an explicit action by an authorized **Operator** after the Installer presents the failed or incomplete verification checks that would otherwise prevent ordinary completion.
+
+FR-EXECUTION-014B. The Installer SHALL record the accepting identity, timestamp, and accepted verification exceptions for a **Degraded Completion State** and include them in the final session report.
+
 ## 14. Progress Monitoring
 
 FR-MONITORING-001. The Installer SHALL update execution progress in the web UI continuously during a run (for example via push notifications or polling at a short interval).
@@ -794,7 +760,9 @@ FR-MONITORING-006. The Installer SHALL provide a read-only run-state-and-confirm
 
 ### 15.1 Cancellation
 
-FR-RUNCONTROL-001. The Installer SHALL allow an authorized user with operator privileges to request cancellation of a running session from the web UI.
+FR-RUNCONTROL-001. The Installer SHALL allow an authorized user with operator privileges to request cancellation of a running session from the web UI and the documented REST API.
+
+FR-RUNCONTROL-001A. Cancellation requests issued through the web UI and REST API SHALL apply the same authorization rules, state transitions, and safety semantics.
 
 FR-RUNCONTROL-002. Cancellation SHALL be cooperative and phase-aware.
 
@@ -818,7 +786,9 @@ FR-RUNCONTROL-007. For bridge-mode installations, failure reporting SHALL identi
 
 ### 15.3 Resume
 
-FR-RUNCONTROL-008. The Installer SHALL support rerunning or resuming from a safe checkpoint when the backend and session state allow.
+FR-RUNCONTROL-008. The Installer SHALL support rerunning or resuming from a safe checkpoint through documented web UI controls and REST API operations when the backend and session state allow.
+
+FR-RUNCONTROL-008A. Before rerun or resume is invoked, the Installer SHALL present whether the session is eligible, the checkpoint or rerun scope to be used, and any unavailable-state reason when rerun or resume is not currently allowed.
 
 FR-RUNCONTROL-009. The Installer SHALL NOT advertise rollback or resume for a phase unless that behavior is implemented.
 
@@ -827,6 +797,10 @@ FR-RUNCONTROL-009. The Installer SHALL NOT advertise rollback or resume for a ph
 FR-REPORTING-001. The Installer SHALL persist the effective installation configuration used for execution.
 
 FR-REPORTING-002. The Installer SHALL persist the discovery snapshot, validation results, execution log, and final status report for each session.
+
+FR-REPORTING-002A. When **Expert Override** is used for disk selection, the Installer SHALL persist the manually entered device identifiers, the associated warnings shown to the operator, the acting identity, and the timestamp as part of the session record.
+
+FR-REPORTING-002B. When a session completes in **Degraded Completion State**, the final status report SHALL identify the accepted verification exceptions together with the accepting identity and timestamp.
 
 FR-REPORTING-003. On successful completion, the Installer SHALL produce a completion report containing at minimum:
 
@@ -845,19 +819,22 @@ FR-REPORTING-006. The Installer SHALL store session metadata, discovery snapshot
 
 ## 17. REST API Requirements
 
-FR-API-001. The Installer SHALL expose a documented REST API for all externally usable functions.
+FR-API-001. The Installer SHALL expose a documented REST API for all client-visible externally usable functions.
 
 FR-API-002. The REST API SHALL cover at minimum:
 
 - installation-session lifecycle management;
 - discovery execution and retrieval of discovery results;
 - configuration creation, import, update, retrieval, and export;
-- validation execution and retrieval of validation results;
-- execution start, progress retrieval, cancellation request, and status retrieval;
+- validation execution and retrieval of validation results, including validation-only or dry-run invocation required by FR-USABILITY-003;
+- execution start, progress retrieval, cancellation request, rerun or resume request, and status retrieval;
+- administrative functions required by FR-ACCESS-004;
 - access to logs, reports, and persisted artifacts;
 - data needed for presets, supported options, and reference metadata in the UI.
 
 FR-API-003. The REST API SHALL be documented in a human-readable overview and in a machine-readable contract suitable for client generation (for example OpenAPI 3.x).
+
+FR-API-003A. The API contract SHALL identify the required authorization role for each operation and whether the operation is available in interactive mode, batch mode, or both where that distinction affects behavior.
 
 FR-API-004. The Installer UI SHALL use the documented REST API for data retrieval and operations.
 
@@ -895,25 +872,25 @@ FR-UI-009B. **Observer** SHALL NOT have access to configuration inputs or confir
 
 ### 18.1 Visual Design and Layout
 
-FR-UI-010. The Installer UI visual design SHALL align with the colors, typography, and general visual language used in the YDB UI ecosystem, using `ydb-platform/ydb-ui-components` and `ydb-platform/ydb-embedded-ui` as the primary references.
+FR-UI-010. The Installer UI visual design SHALL align with the YDB UI ecosystem, using `ydb-platform/ydb-ui-components` and `ydb-platform/ydb-embedded-ui` as the primary references.
 
 FR-UI-010A. The Installer UI SHALL use the same or compatible default color palette and font families as the referenced YDB UI patterns unless a documented product-specific exception requires otherwise.
 
-FR-UI-010B. Custom visual styling introduced for Installer-specific workflows SHALL remain consistent with the referenced YDB UI visual language and SHALL NOT create a conflicting brand or design system within the product.
+FR-UI-010B. Installer-specific styling SHALL remain consistent with the referenced YDB UI visual language and SHALL NOT create a conflicting design system within the product.
 
-FR-UI-011. The UI SHALL prefer theme variables, design tokens, and reusable component styles from `ydb-platform/ydb-ui-components` and related YDB UI patterns instead of ad hoc hard-coded styling where equivalent reusable styling exists.
+FR-UI-011. The UI SHALL prefer theme variables, design tokens, and reusable component styles over ad hoc hard-coded styling where equivalent reusable styling exists.
 
-FR-UI-012. The primary Installer workflows SHALL use a compact layout that remains usable on smaller screens and typical laptop viewports without relying on large-screen-only compositions.
+FR-UI-012. The primary Installer workflows SHALL remain usable on typical laptop and smaller supported viewports without relying on large-screen-only compositions.
 
-FR-UI-012A. For the Home, Configuration, Monitoring, and Logs screens, the compact layout SHALL preserve readability and operability by avoiding unnecessary horizontal scrolling, overlapping controls, and clipped primary actions at supported smaller viewport sizes.
+FR-UI-012A. Compact layouts for Home, Configuration, Monitoring, and Logs SHALL avoid unnecessary horizontal scrolling, overlapping controls, and clipped primary actions.
 
-FR-UI-012B. Compact presentation SHALL reduce unnecessary whitespace and oversized chrome while preserving clear visual separation of navigation, form content, status information, and destructive actions.
+FR-UI-012B. Compact presentation SHALL reduce unnecessary whitespace and oversized chrome while preserving clear separation of navigation, forms, status, and destructive actions.
 
-FR-UI-013. The layout SHALL expand gracefully on larger screens by using additional width for denser tables, side-by-side panels, broader summaries, or richer monitoring views when that improves operator efficiency.
+FR-UI-013. The layout SHALL use additional width on larger screens for denser tables, side-by-side panels, broader summaries, or richer monitoring views when that improves operator efficiency.
 
 FR-UI-013A. Larger-screen expansion SHALL preserve the same navigation model and information hierarchy used on smaller screens and SHALL NOT rely on stretched controls or empty filler space as the primary use of additional width.
 
-FR-UI-014. The UI SHALL support responsive or adaptive layout behavior across supported screen sizes, including stacked or collapsed arrangements on smaller screens and multi-column arrangements on larger screens where appropriate.
+FR-UI-014. The UI SHALL support responsive or adaptive layout behavior across supported screen sizes.
 
 FR-UI-015. For step-based configuration and execution screens, the UI SHALL prioritize keeping the current step context, primary actions, and critical warnings easy to locate without excessive scrolling.
 
@@ -938,31 +915,31 @@ FR-USABILITY-002. The Installer SHALL follow the principle: discover first, vali
 
 FR-USABILITY-003. The Installer SHALL support a validation-only or dry-run mode that runs discovery and preflight checks without changing target systems.
 
+FR-USABILITY-003A. Validation-only or dry-run SHALL be invocable through documented startup or REST API mechanisms and SHALL create or update an installation session with persisted discovery and validation outputs.
+
+FR-USABILITY-003B. Validation-only or dry-run MAY perform the read-only remote inspection needed for discovery and preflight checks, but SHALL NOT start host preparation, artifact deployment, disk modification, storage initialization, database creation, or Compute Node startup.
+
+FR-USABILITY-003C. The resulting session status and report SHALL state that the run was validation-only or dry-run and that no target-system changes were requested by the Installer.
+
 FR-USABILITY-004. In interactive mode, the Installer SHALL autosave configuration drafts at appropriate intervals and on significant edits, consistent with FR-INTERACTIVE-004.
 
 FR-USABILITY-005. The Installer SHALL minimize secret exposure in the UI, logs, exports, and troubleshooting output.
 
 FR-USABILITY-006. The Installer SHALL explain blocking conditions and destructive risks in operator-oriented language, not backend jargon alone.
 
-FR-USABILITY-007. Baseline installation and first-run setup of the Installer itself SHALL require only copying or unpacking the Installer onto a supported Control Host and supplying startup configuration plus local writable storage.
+FR-USABILITY-007. Baseline installation and first-run setup of the Installer itself SHALL require only copying or unpacking the Installer onto a supported Control Host, supplying startup configuration, and providing local writable storage.
 
-FR-USABILITY-007A. Baseline installation and first-run setup of the Installer itself SHALL NOT require provisioning separate infrastructure services before the Installer can be used.
+FR-USABILITY-007A. Baseline installation and first-run setup SHALL NOT require provisioning separate infrastructure services before the Installer can be used.
 
 ## 20. Acceptance Criteria Summary
 
 This specification is satisfied when the product can:
 
-1. discover and present host and disk inventory before installation;
-2. guide an operator through interactive configuration steps with validation and review;
-3. execute the same plan from a batch specification while presenting batch-derived configuration through a pre-filled read-only configuration-step projection;
-4. select **interactive** or **batch** Installation Mode at server startup per §2.5 (command line, with optional config as allowed there) and enforce **Operator** vs **Observer** behavior in both modes (§3);
-5. expose a documented REST API for all Installer functions and consume that API from the UI;
-6. install a YDB cluster in phases with visible progress;
-7. support `block-4-2`, `mirror-3-dc`, `reduced mirror-3-dc`, and bridge-enabled cluster layouts;
-8. reduce accidental disk destruction through discovery-based confirmation and explicit approval for destructive steps;
-9. support cancellation and clear failure reporting;
-10. produce reusable artifacts and a final installation report;
-11. follow YDB UI visual patterns, including compatible colors and fonts, while remaining compact on smaller screens and expanding cleanly on larger screens;
-12. localize UI messages from external resource files with English fallback, while keeping REST API and log messages in English;
-13. run in a copy-and-use deployment model without mandatory external infrastructure services for baseline operation; and
-14. avoid mandatory dependence on existing Ansible- or Python-based automation by preferring direct reuse or embedding of `ydbops` capabilities.
+1. select **interactive** or **batch** Installation Mode at startup and enforce the role model defined in §2.5 and §3;
+2. discover inventory, guide interactive configuration, and execute equivalent batch-defined plans (§5-§7);
+3. validate before destructive execution and preserve the discovery-first, destroy-late safety model (§4, §9, §12, §19);
+4. install supported layouts in ordered phases with visible progress, logs, failure reporting, and eligible rerun or resume behavior (§8, §13-§15);
+5. expose a documented REST API for client-visible Installer functions and consume that API from the UI (§17);
+6. produce persisted session records, reusable artifacts, and final reports (§16);
+7. provide a web UI aligned with YDB UI patterns, role-aware controls, and externalized localization resources (§6, §18); and
+8. operate in the Copy-and-Use baseline without mandatory external infrastructure or mandatory Ansible/Python execution paths (§2.4, §19).
