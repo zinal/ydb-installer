@@ -8,9 +8,9 @@ import { useInstallationSession } from '@/session/InstallationSessionProvider';
 export function ResultsPage() {
   const { sessionId, isLoading, error } = useInstallationSession();
 
-  const progressQ = useQuery({
-    queryKey: ['progress', sessionId],
-    queryFn: () => api.getProgress(sessionId!),
+  const reportQ = useQuery({
+    queryKey: ['completion-report', sessionId],
+    queryFn: () => api.getCompletionReport(sessionId!),
     enabled: Boolean(sessionId),
   });
 
@@ -24,7 +24,7 @@ export function ResultsPage() {
 
       <Card style={{ padding: 16 }}>
         <Text variant="code-1" style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>
-          {JSON.stringify(progressQ.data ?? {}, null, 2)}
+          {JSON.stringify(reportQ.data ?? {}, null, 2)}
         </Text>
       </Card>
     </Flex>

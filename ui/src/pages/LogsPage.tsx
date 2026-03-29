@@ -1,11 +1,21 @@
 import { useState } from 'react';
-import { Card, Flex, Switch, Text, TextInput, Select } from '@gravity-ui/uikit';
+import { useQuery } from '@tanstack/react-query';
+import { Card, Flex, Loader, Select, Switch, Text, TextInput } from '@gravity-ui/uikit';
+import { api } from '@/api/client';
 import { t } from '@/i18n';
+import { useInstallationSession } from '@/session/InstallationSessionProvider';
 
 /** Prototype logs view (§6.9); wire to session log API when available. */
 export function LogsPage() {
+  const { sessionId } = useInstallationSession();
   const [autoFollow, setAutoFollow] = useState(true);
   const [host, setHost] = useState<string[]>([]);
+  const logsQ = useQuery({
+    queryKey: ['logs', sessionId],
+    queryFn: () => api.getLogs(sessionId!, 300),
+    enabled: Boolean(sessionId),
+    refetchInterval: autoFollow ? 4000 : false,
+  });
 
   return (
     <Flex direction="column" gap={4}>
@@ -30,7 +40,18 @@ export function LogsPage() {
       </Card>
 
       <Card style={{ padding: 16, minHeight: 200, fontFamily: 'var(--g-font-family-monospace)' }}>
-        <Text color="secondary">{t('logs.placeholder')}</Text>
+        {logsQ.isLoading ? (
+          <Loader size="s" />
+        ) : (
+          <Flex direction="column" gap={1}>
+            {(logsQ.data?.lines ?? []).map((line, idx) => (
+              <Text key={`${idx}-${line}`} variant="code-1">
+                {line}
+              </Text>
+            ))}
+          </Flex>
+        )}
+        {logsQ.error && <Text color="danger">{(logsQ.error as Error).message}</Text>}
       </Card>
     </Flex>
   );

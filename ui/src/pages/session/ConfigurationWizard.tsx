@@ -3,7 +3,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Button, Flex, Loader, Stepper, Text } from '@gravity-ui/uikit';
-import { api, type TargetHost } from '@/api/client';
+import { api, type InstallationMode, type TargetHost } from '@/api/client';
 import {
   clampStructuralWizardStep,
   DISCOVERY_ACK_STORAGE_KEY,
@@ -14,7 +14,7 @@ import {
 } from '@/navigation/wizardStepStorage';
 import { t } from '@/i18n';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
-import { useAuthPrototype } from '@/session/AuthPrototypeProvider';
+import { useAuthSession } from '@/session/AuthSessionProvider';
 import { wizardSteps } from './wizardSteps';
 import { initialConfigurationDraft, type ConfigurationDraft } from './wizard/configurationDraft';
 import { canReachStep } from './wizard/stepValidation';
@@ -46,8 +46,8 @@ function normalizeTarget(t: TargetHost): TargetFormRow {
 
 export function ConfigurationWizard() {
   const { sessionId, isLoading: bootLoading, error: bootError } = useInstallationSession();
-  const { role } = useAuthPrototype();
-  const readOnly = role !== 'operator';
+  const { role, identity } = useAuthSession();
+  const mode: InstallationMode = identity?.mode ?? 'interactive';
 
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -94,6 +94,8 @@ export function ConfigurationWizard() {
 
   const session = sessionQuery.data;
   const snapshot = discoveryQuery.data;
+  const configReadOnly = role !== 'operator' || mode === 'batch' || session?.mode === 'batch';
+  const runControlsReadOnly = role !== 'operator';
 
   useEffect(() => {
     setWizardStepReady(false);
@@ -163,11 +165,13 @@ export function ConfigurationWizard() {
       }
     }
 
-    const next = clampStructuralWizardStep(desired, session, snapshot);
+    const next = configReadOnly
+      ? Math.min(wizardSteps.length - 1, Math.max(0, desired))
+      : clampStructuralWizardStep(desired, session, snapshot);
     setStepIndex(next);
     setMaxReachedStep((m) => Math.max(m, next));
     setWizardStepReady(true);
-  }, [sessionId, session, snapshot, discoveryQuery.isLoading, wizardStepReady, searchParams]);
+  }, [sessionId, session, snapshot, discoveryQuery.isLoading, wizardStepReady, searchParams, configReadOnly]);
 
   useEffect(() => {
     if (!sessionId || !wizardStepReady) return;
@@ -184,9 +188,11 @@ export function ConfigurationWizard() {
     if (param == null) return;
     const n = parseInt(param, 10);
     if (!Number.isFinite(n)) return;
-    const next = clampStructuralWizardStep(n, session, snapshot);
+    const next = configReadOnly
+      ? Math.min(wizardSteps.length - 1, Math.max(0, n))
+      : clampStructuralWizardStep(n, session, snapshot);
     setStepIndex((s) => (s !== next ? next : s));
-  }, [searchParams, sessionId, session, snapshot, wizardStepReady]);
+  }, [searchParams, sessionId, session, snapshot, wizardStepReady, configReadOnly]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -308,29 +314,37 @@ export function ConfigurationWizard() {
   const discoveryPhase = session?.phases?.find((p) => p.phaseId === 2);
   const targetsSaved = (session?.targets?.length ?? 0) > 0;
 
+  const canNavigateToStep = useCallback(
+    (i: number) => {
+      if (i < 0 || i >= wizardSteps.length) return false;
+      if (configReadOnly) return true;
+      return canReachStep(i, session, snapshot, draft);
+    },
+    [configReadOnly, session, snapshot, draft],
+  );
+
   const trySetStep = useCallback(
     (i: number) => {
       if (!sessionId) return;
-      if (!canReachStep(i, session, snapshot, draft)) {
+      if (!canNavigateToStep(i)) {
         setNavHint(t('wizard.nav.blocked'));
         return;
       }
       setNavHint(null);
       setStepIndex(i);
     },
-    [sessionId, session, snapshot, draft],
+    [sessionId, canNavigateToStep],
   );
 
   const goNext = useCallback(() => {
-    if (readOnly) return;
     const next = stepIndex + 1;
-    if (next < wizardSteps.length && canReachStep(next, session, snapshot, draft)) {
+    if (next < wizardSteps.length && canNavigateToStep(next)) {
       setNavHint(null);
       setStepIndex(next);
     } else {
       setNavHint(t('wizard.nav.completeOrInvalid'));
     }
-  }, [readOnly, stepIndex, session, snapshot, draft]);
+  }, [stepIndex, canNavigateToStep]);
 
   const goBack = useCallback(() => {
     setStepIndex((s) => Math.max(0, s - 1));
@@ -347,6 +361,15 @@ export function ConfigurationWizard() {
     patchDraft((d) => ({ ...d, executionStarted: true }));
     setStepIndex(10);
   }, [patchDraft]);
+
+  const startExecutionMutation = useMutation({
+    mutationFn: () => api.startExecution(sessionId!),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['session', sessionId] });
+      void qc.invalidateQueries({ queryKey: ['progress', sessionId] });
+      onStartExecution();
+    },
+  });
 
   const stepContent = useMemo(() => {
     if (!sessionId) return null;
@@ -365,8 +388,8 @@ export function ConfigurationWizard() {
             defaultTemplateUser={session?.targets?.[0]?.user ?? ''}
             draft={draft}
             patchDraft={patchDraft}
-            readOnly={readOnly}
-            onCommitTargets={readOnly ? () => {} : onSaveTargets}
+            readOnly={configReadOnly}
+            onCommitTargets={configReadOnly ? () => {} : onSaveTargets}
           />
         );
       case 1:
@@ -379,7 +402,7 @@ export function ConfigurationWizard() {
             onRunDiscovery={() => runDiscovery.mutate()}
             onRefreshDiscovery={() => refreshDiscovery.mutate()}
             runError={runDiscovery.error as Error | null}
-            readOnly={readOnly}
+            readOnly={configReadOnly}
           />
         );
       case 2:
@@ -388,33 +411,34 @@ export function ConfigurationWizard() {
             snapshot={snapshot}
             draft={draft}
             patchDraft={patchDraft}
-            readOnly={readOnly}
+            readOnly={configReadOnly}
           />
         );
       case 3:
-        return <LayoutStep hosts={hosts} draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <LayoutStep hosts={hosts} draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 4:
-        return <StorageStep hosts={hosts} draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <StorageStep hosts={hosts} draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 5:
-        return <NetworkStep draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <NetworkStep draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 6:
-        return <SecurityStep draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <SecurityStep draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 7:
-        return <ArtifactsStep draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <ArtifactsStep draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 8:
-        return <DatabaseStep draft={draft} patchDraft={patchDraft} readOnly={readOnly} />;
+        return <DatabaseStep draft={draft} patchDraft={patchDraft} readOnly={configReadOnly} />;
       case 9:
         return (
           <ReviewStep
             sessionId={sessionId}
             draft={draft}
             patchDraft={patchDraft}
-            onStartExecution={onStartExecution}
-            readOnly={readOnly}
+            onStartExecution={() => startExecutionMutation.mutate()}
+            readOnly={runControlsReadOnly}
+            modeReadOnly={false}
           />
         );
       case 10:
-        return <RunStateStep readOnly={readOnly} />;
+        return <RunStateStep sessionId={sessionId} readOnly={runControlsReadOnly} />;
       default:
         return null;
     }
@@ -429,12 +453,14 @@ export function ConfigurationWizard() {
     session?.targets,
     draft,
     patchDraft,
-    readOnly,
+    configReadOnly,
+    runControlsReadOnly,
+    mode,
     targetsSaved,
     discoveryPhase,
     runDiscovery,
     refreshDiscovery,
-    onStartExecution,
+    startExecutionMutation,
     onSaveTargets,
   ]);
 
@@ -452,7 +478,7 @@ export function ConfigurationWizard() {
     <Flex direction="column" gap={4}>
       <Flex direction="column" gap={2}>
         <Text variant="header-1">{t('wizard.title')}</Text>
-        {readOnly && (
+        {configReadOnly && (
           <Text variant="body-2" color="complementary">
             {t('auth.readOnlyBadge')}
           </Text>
@@ -470,7 +496,7 @@ export function ConfigurationWizard() {
                 key={step.id}
                 id={String(i)}
                 view={completed ? 'success' : 'idle'}
-                disabled={!canReachStep(i, session, snapshot, draft)}
+                disabled={configReadOnly ? false : !canNavigateToStep(i)}
               >
                 {t(step.labelKey)}
               </Stepper.Item>
@@ -498,8 +524,8 @@ export function ConfigurationWizard() {
             {t('wizard.back')}
           </Button>
         )}
-        {stepIndex < wizardSteps.length - 1 && stepIndex !== 9 && (
-          <Button view="action" disabled={readOnly} onClick={goNext}>
+        {stepIndex < wizardSteps.length - 1 && (
+          <Button view="action" disabled={!canNavigateToStep(stepIndex + 1)} onClick={goNext}>
             {t('wizard.next')}
           </Button>
         )}

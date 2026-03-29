@@ -9,6 +9,9 @@ export function resolvePostLoginDestination(
   session: InstallationSession,
   snapshot: DiscoverySnapshot | undefined,
 ): string {
+  if (session.mode === 'batch') {
+    return '/configuration?step=10';
+  }
   const status = session.status;
 
   if (status === 'running' || status === 'cancel_requested') {

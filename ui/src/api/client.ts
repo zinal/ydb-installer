@@ -3,6 +3,7 @@ const base = '';
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${base}${path}`, {
     ...init,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(init?.headers ?? {}),
@@ -19,6 +20,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export type InstallationMode = 'interactive' | 'batch';
+export type UserRole = 'operator' | 'observer' | 'administrator';
 
 export type PhaseState = 'pending' | 'running' | 'succeeded' | 'failed' | 'skipped' | 'cancelled';
 
@@ -88,7 +90,68 @@ export interface InstallationSession {
   targets?: TargetHost[];
 }
 
+export interface AuthIdentity {
+  username: string;
+  roles: UserRole[];
+  mode: InstallationMode;
+}
+
+export interface RuntimeMetadata {
+  mode: InstallationMode;
+}
+
+export interface ValidationIssue {
+  code: string;
+  severity: 'blocking' | 'warning' | 'info';
+  message: string;
+  hostId?: string;
+  phaseHint?: string;
+}
+
+export interface ValidationReport {
+  sessionId: string;
+  issues: ValidationIssue[];
+  valid: boolean;
+}
+
+export interface ProgressSnapshot {
+  sessionId: string;
+  currentPhaseId: number;
+  currentTask?: string;
+  elapsedSeconds?: number;
+  recentLogLines?: string[];
+  overallPercent?: number;
+}
+
+export interface CompletionReport {
+  sessionId: string;
+  clusterEndpoints?: string[];
+  layoutSummary?: string;
+  securityMode?: string;
+  databaseNames?: string[];
+  verificationSummary?: string;
+  nextSteps?: string;
+  bridgeSummary?: string;
+}
+
+export interface SessionLogs {
+  lines: string[];
+}
+
 export const api = {
+  login: (body: { role: UserRole; password: string }) =>
+    apiFetch<AuthIdentity>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  logout: () =>
+    apiFetch<void>('/api/v1/auth/logout', {
+      method: 'POST',
+    }),
+
+  me: () => apiFetch<AuthIdentity>('/api/v1/auth/me'),
+
   listSessions: (limit = 50, offset = 0) =>
     apiFetch<InstallationSession[]>(`/api/v1/sessions?limit=${limit}&offset=${offset}`),
 
@@ -125,15 +188,35 @@ export const api = {
 
   getReference: () => apiFetch<Record<string, string>>('/api/v1/metadata/reference'),
 
+  getRuntime: () => apiFetch<RuntimeMetadata>('/api/v1/metadata/runtime'),
+
   runDiscovery: (sessionId: string) =>
     apiFetch<void>(`/api/v1/sessions/${sessionId}/discovery/run`, { method: 'POST' }),
 
   runValidation: (sessionId: string) =>
-    apiFetch<unknown>(`/api/v1/sessions/${sessionId}/validation/run`, { method: 'POST' }),
+    apiFetch<ValidationReport>(`/api/v1/sessions/${sessionId}/validation/run`, { method: 'POST' }),
+
+  getValidation: (sessionId: string) =>
+    apiFetch<ValidationReport>(`/api/v1/sessions/${sessionId}/validation`),
+
+  approveExecution: (sessionId: string) =>
+    apiFetch<void>(`/api/v1/sessions/${sessionId}/execution/approve`, { method: 'POST' }),
+
+  startExecution: (sessionId: string) =>
+    apiFetch<void>(`/api/v1/sessions/${sessionId}/execution/start`, { method: 'POST' }),
 
   getProgress: (sessionId: string) =>
-    apiFetch<unknown>(`/api/v1/sessions/${sessionId}/execution/progress`),
+    apiFetch<ProgressSnapshot>(`/api/v1/sessions/${sessionId}/execution/progress`),
 
   cancelExecution: (sessionId: string) =>
     apiFetch<void>(`/api/v1/sessions/${sessionId}/execution/cancel`, { method: 'POST' }),
+
+  resumeExecution: (sessionId: string) =>
+    apiFetch<void>(`/api/v1/sessions/${sessionId}/execution/resume`, { method: 'POST' }),
+
+  getLogs: (sessionId: string, tail = 200) =>
+    apiFetch<SessionLogs>(`/api/v1/sessions/${sessionId}/logs?tail=${tail}`),
+
+  getCompletionReport: (sessionId: string) =>
+    apiFetch<CompletionReport>(`/api/v1/sessions/${sessionId}/report/completion`),
 };

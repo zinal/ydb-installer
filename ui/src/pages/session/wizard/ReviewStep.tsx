@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
 } from '@gravity-ui/uikit';
-import { api } from '@/api/client';
+import { api, type ValidationReport } from '@/api/client';
 import type { ConfigurationDraft } from './configurationDraft';
 import { t } from '@/i18n';
 
@@ -18,6 +18,7 @@ type Props = {
   patchDraft: (patch: Partial<ConfigurationDraft> | ((d: ConfigurationDraft) => ConfigurationDraft)) => void;
   onStartExecution: () => void;
   readOnly: boolean;
+  modeReadOnly: boolean;
 };
 
 export function ReviewStep({
@@ -26,14 +27,17 @@ export function ReviewStep({
   patchDraft,
   onStartExecution,
   readOnly,
+  modeReadOnly,
 }: Props) {
   const qc = useQueryClient();
   const preflight = useMutation({
     mutationFn: () => api.runValidation(sessionId),
-    onSuccess: () => {
+    onSuccess: (report: ValidationReport) => {
+      const blockingErrors = report.issues.filter((x) => x.severity === 'blocking').length;
+      const warnings = report.issues.filter((x) => x.severity === 'warning').length;
       patchDraft((d) => ({
         ...d,
-        preflight: { ran: true, blockingErrors: 0, warnings: 1 },
+        preflight: { ran: true, blockingErrors, warnings },
       }));
       qc.invalidateQueries({ queryKey: ['session', sessionId] });
     },
@@ -50,6 +54,7 @@ export function ReviewStep({
     draft.preflight.blockingErrors === 0 &&
     draft.review.approveDestructive &&
     draft.review.confirmPhrase.trim().length > 0;
+  const runControlsReadOnly = readOnly || modeReadOnly;
 
   return (
     <Flex direction="column" gap={4}>
@@ -86,7 +91,7 @@ export function ReviewStep({
             </Text>
           </Flex>
         )}
-        {!readOnly && (
+        {!runControlsReadOnly && (
           <Button
             style={{ marginTop: 12 }}
             view="outlined"
@@ -106,7 +111,7 @@ export function ReviewStep({
         <Flex gap={3} alignItems="center">
           <Checkbox
             checked={draft.review.approveDestructive}
-            disabled={readOnly}
+            disabled={runControlsReadOnly}
             onUpdate={(v) =>
               patchDraft((d) => ({
                 ...d,
@@ -120,7 +125,7 @@ export function ReviewStep({
           style={{ marginTop: 12 }}
           label={t('wizard.review.confirmLabel')}
           value={draft.review.confirmPhrase}
-          disabled={readOnly}
+          disabled={runControlsReadOnly}
           onUpdate={(v) =>
             patchDraft((d) => ({
               ...d,
@@ -130,7 +135,7 @@ export function ReviewStep({
         />
       </Card>
 
-      {!readOnly && (
+      {!runControlsReadOnly && (
         <Button size="l" view="action" disabled={!canStart} onClick={onStartExecution}>
           {t('wizard.review.start')}
         </Button>

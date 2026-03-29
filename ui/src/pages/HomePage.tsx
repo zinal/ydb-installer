@@ -1,41 +1,47 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Flex, Loader, RadioGroup, Text, TextInput } from '@gravity-ui/uikit';
 import { api } from '@/api/client';
 import { t } from '@/i18n';
 import { resolvePostLoginDestination } from '@/navigation/postLoginRouting';
-import { useInstallationSession } from '@/session/InstallationSessionProvider';
-import { useAuthPrototype, type PrototypeRole } from '@/session/AuthPrototypeProvider';
+import { useAuthSession } from '@/session/AuthSessionProvider';
 
 export function HomePage() {
-  const { session, sessionId, isLoading, error } = useInstallationSession();
-  const { role, login } = useAuthPrototype();
+  const { role, login, identity } = useAuthSession();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [selectedRole, setSelectedRole] = useState<PrototypeRole>('operator');
+  const [selectedRole, setSelectedRole] = useState<'operator' | 'observer'>('operator');
   const [password, setPassword] = useState('');
   const [loginBusy, setLoginBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   const onSignIn = async () => {
-    if (!sessionId) return;
     setLoginBusy(true);
+    setLoginError(null);
     try {
-      login(selectedRole, password);
-      const [sess, snap] = await Promise.all([
-        queryClient.fetchQuery({
-          queryKey: ['session', sessionId],
-          queryFn: () => api.getSession(sessionId),
-        }),
+      await login(selectedRole, password);
+      let currentSession = (await api.listSessions(1))[0];
+      if (!currentSession) {
+        currentSession = await api.createSession({ mode: 'interactive', title: t('home.sessionTitle') });
+      }
+      const [sessionForDestination, snap] = await Promise.all([
+        Promise.resolve(currentSession),
         queryClient
           .fetchQuery({
-            queryKey: ['discovery', sessionId],
-            queryFn: () => api.getDiscovery(sessionId),
+            queryKey: ['discovery', currentSession.id],
+            queryFn: () => api.getDiscovery(currentSession.id),
           })
           .catch(() => undefined),
       ]);
-      const dest = resolvePostLoginDestination(sess, snap);
-      navigate(dest, { replace: true });
+      await queryClient.invalidateQueries({ queryKey: ['installation-session'] });
+      await queryClient.invalidateQueries({ queryKey: ['session', currentSession.id] });
+      const dest = resolvePostLoginDestination(sessionForDestination, snap);
+      const requested = searchParams.get('next');
+      navigate(requested && requested.startsWith('/') ? requested : dest, { replace: true });
+    } catch (e) {
+      setLoginError((e as Error).message || t('auth.loginFailed'));
     } finally {
       setLoginBusy(false);
     }
@@ -50,64 +56,64 @@ export function HomePage() {
         {t('home.description')}
       </Text>
 
-      {isLoading && <Loader size="l" />}
-      {error && (
-        <Text as="div" color="danger">
-          {error.message} — start the Go server or use Vite proxy to /api.
-        </Text>
-      )}
+      {loginBusy && <Loader size="l" />}
 
-      {!isLoading && !error && session && (
-        <>
-          {!role ? (
-            <Card style={{ padding: 24 }}>
-              <Flex direction="column" gap={4}>
-                <Text as="div" variant="subheader-2" color="primary">
-                  {t('auth.signIn')}
-                </Text>
+      {!identity ? (
+        <Card style={{ padding: 24 }}>
+          <Flex direction="column" gap={4}>
+            <Text as="div" variant="subheader-2" color="primary">
+              {t('auth.signIn')}
+            </Text>
 
-                <Text as="div" variant="body-2" color="complementary">
-                  {t('auth.signInHint')}
-                </Text>
+            <Text as="div" variant="body-2" color="complementary">
+              {t('auth.signInHint')}
+            </Text>
 
-                <Flex direction="column" gap={4} style={{ maxWidth: 440 }}>
-                  <RadioGroup
-                    size="l"
-                    name="role"
-                    options={[
-                      { value: 'operator', content: t('auth.roleOperator') },
-                      { value: 'observer', content: t('auth.roleObserver') },
-                    ]}
-                    value={selectedRole}
-                    onUpdate={(v) => setSelectedRole(v as PrototypeRole)}
-                  />
-                  <TextInput
-                    label={t('auth.password')}
-                    type="password"
-                    value={password}
-                    onUpdate={setPassword}
-                    size="l"
-                  />
-                  <Button view="action" size="l" loading={loginBusy} onClick={() => void onSignIn()}>
-                    {t('auth.submit')}
-                  </Button>
-                </Flex>
-              </Flex>
-            </Card>
-          ) : (
-            <Card style={{ padding: 24 }}>
-              <Flex direction="column" gap={3}>
-                <Text as="div" variant="body-2" color="complementary">
-                  {t('auth.signedInAs')}{' '}
-                  {role === 'operator' ? t('auth.roleOperator') : t('auth.roleObserver')}
+            <Flex direction="column" gap={4} style={{ maxWidth: 440 }}>
+              <RadioGroup
+                size="l"
+                name="role"
+                options={[
+                  { value: 'operator', content: t('auth.roleOperator') },
+                  { value: 'observer', content: t('auth.roleObserver') },
+                ]}
+                value={selectedRole}
+                onUpdate={(v) => setSelectedRole(v as 'operator' | 'observer')}
+              />
+              <TextInput
+                label={t('auth.password')}
+                type="password"
+                value={password}
+                onUpdate={setPassword}
+                size="l"
+              />
+              <Button view="action" size="l" loading={loginBusy} onClick={() => void onSignIn()}>
+                {t('auth.submit')}
+              </Button>
+              {loginError && (
+                <Text as="div" color="danger">
+                  {loginError}
                 </Text>
-                <Text as="div" variant="body-2" color="complementary">
-                  {t('home.useHeaderNav')}
-                </Text>
-              </Flex>
-            </Card>
-          )}
-        </>
+              )}
+            </Flex>
+          </Flex>
+        </Card>
+      ) : (
+        <Card style={{ padding: 24 }}>
+          <Flex direction="column" gap={3}>
+            <Text as="div" variant="body-2" color="complementary">
+              {t('auth.signedInAs')}{' '}
+              {role === 'operator'
+                ? t('auth.roleOperator')
+                : role === 'observer'
+                  ? t('auth.roleObserver')
+                  : identity.username}
+            </Text>
+            <Text as="div" variant="body-2" color="complementary">
+              {t('home.useHeaderNav')}
+            </Text>
+          </Flex>
+        </Card>
       )}
     </Flex>
   );

@@ -1,15 +1,17 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader } from '@gravity-ui/uikit';
-import { useAuthPrototype } from '@/session/AuthPrototypeProvider';
+import { useAuthSession } from '@/session/AuthSessionProvider';
 
 export function LogoutPage() {
-  const { logout } = useAuthPrototype();
+  const { logout } = useAuthSession();
   const navigate = useNavigate();
 
   useEffect(() => {
-    logout();
-    navigate('/', { replace: true });
+    void (async () => {
+      await logout();
+      navigate('/', { replace: true });
+    })();
   }, [logout, navigate]);
 
   return <Loader size="l" />;

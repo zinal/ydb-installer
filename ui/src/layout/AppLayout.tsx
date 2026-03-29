@@ -1,11 +1,11 @@
 import { Outlet, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Button, Flex, Text } from '@gravity-ui/uikit';
 import { t } from '@/i18n';
-import { useAuthPrototype } from '@/session/AuthPrototypeProvider';
+import { useAuthSession } from '@/session/AuthSessionProvider';
 import { useInstallationSession } from '@/session/InstallationSessionProvider';
 
 export function AppLayout() {
-  const { role, logout } = useAuthPrototype();
+  const { role, identity, logout } = useAuthSession();
   const { session, isLoading: sessionLoading } = useInstallationSession();
   const navigate = useNavigate();
 
@@ -25,7 +25,7 @@ export function AppLayout() {
           style={{ padding: '12px 24px' }}
         >
           <Text variant="header-1">{t('app.title')}</Text>
-          {role ? (
+          {identity ? (
             <Flex gap={3} alignItems="center" wrap="wrap" className="installer-nav">
               <RouterLink to="/">{t('nav.home')}</RouterLink>
               <RouterLink to="/configuration">{t('nav.configuration')}</RouterLink>
@@ -33,14 +33,20 @@ export function AppLayout() {
               <RouterLink to="/logs">{t('nav.logs')}</RouterLink>
               <RouterLink to="/results">{t('nav.results')}</RouterLink>
               <Text variant="body-2" color="complementary">
-                {role === 'operator' ? t('auth.roleOperator') : t('auth.roleObserver')}
+                {role === 'operator'
+                  ? t('auth.roleOperator')
+                  : role === 'observer'
+                    ? t('auth.roleObserver')
+                    : identity.username}
               </Text>
               <Button
                 view="flat"
                 size="s"
                 onClick={() => {
-                  logout();
-                  navigate('/');
+                  void (async () => {
+                    await logout();
+                    navigate('/');
+                  })();
                 }}
               >
                 {t('nav.logout')}
@@ -48,7 +54,7 @@ export function AppLayout() {
             </Flex>
           ) : null}
         </Flex>
-        {role && (
+        {identity && (
           <Flex style={{ padding: '8px 24px 14px' }}>
             <Text variant="body-2" color="complementary">
               {sessionLoading && !session

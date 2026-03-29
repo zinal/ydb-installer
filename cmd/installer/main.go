@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -16,6 +17,8 @@ import (
 	discoverysvc "github.com/ydb-platform/ydb-installer/app/discovery"
 	"github.com/ydb-platform/ydb-installer/app/session"
 	appstub "github.com/ydb-platform/ydb-installer/app/stub"
+	"github.com/ydb-platform/ydb-installer/domain"
+	"github.com/ydb-platform/ydb-installer/security"
 	sqlitestore "github.com/ydb-platform/ydb-installer/storage/sqlite"
 )
 
@@ -25,6 +28,7 @@ var web embed.FS
 func main() {
 	addr := flag.String("listen", ":8443", "HTTP listen address")
 	dataDir := flag.String("data-dir", defaultDataDir(), "writable directory for SQLite state")
+	modeFlag := flag.String("mode", defaultMode(), "installer mode: interactive|batch")
 	flag.Parse()
 
 	if err := os.MkdirAll(*dataDir, 0o700); err != nil {
@@ -39,9 +43,17 @@ func main() {
 
 	sessSvc := &session.Service{Store: st}
 	discSvc := &discoverysvc.Service{Store: st}
-
-	svc := &appstub.Services{}
+	mode := parseMode(*modeFlag)
+	auth := security.NewSessionAuth(security.AuthConfig{
+		Mode:                  mode,
+		OperatorPassword:      envOrDefault("YDB_INSTALLER_OPERATOR_PASSWORD", "operator"),
+		ObserverPassword:      envOrDefault("YDB_INSTALLER_OBSERVER_PASSWORD", "observer"),
+		AdministratorPassword: envOrDefault("YDB_INSTALLER_ADMIN_PASSWORD", "admin"),
+	})
+	svc := appstub.NewServices(st)
 	deps := api.Deps{
+		Mode:          mode,
+		Auth:          auth,
 		Sessions:      sessSvc,
 		Discovery:     discSvc,
 		Configuration: svc,
@@ -79,4 +91,28 @@ func defaultDataDir() string {
 		return d
 	}
 	return filepath.Join(".", "data")
+}
+
+func envOrDefault(key, fallback string) string {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return fallback
+	}
+	return v
+}
+
+func defaultMode() string {
+	if v := strings.TrimSpace(os.Getenv("YDB_INSTALLER_MODE")); v != "" {
+		return v
+	}
+	return string(domain.ModeInteractive)
+}
+
+func parseMode(raw string) domain.InstallationMode {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(domain.ModeBatch):
+		return domain.ModeBatch
+	default:
+		return domain.ModeInteractive
+	}
 }
