@@ -92,7 +92,7 @@ export function validateThroughDatabase(
 }
 
 /**
- * Whether the operator may navigate to `targetIndex` (0–10). See §6.5.
+ * Whether the operator may navigate to `targetIndex` (0–9). See §6.5.
  */
 export function canReachStep(
   targetIndex: number,
@@ -109,15 +109,14 @@ export function canReachStep(
   if (!targetsSaved) return false;
   if (targetIndex <= 1) return true;
   if (!hasSnapshot) return false;
-  if (targetIndex <= 2) return true;
   if (!draft.discoveryAcknowledged) return false;
 
-  if (targetIndex >= 4 && validateLayoutStep(draft)) return false;
-  if (targetIndex >= 5 && validateStorageStep(draft, hostIds)) return false;
-  if (targetIndex >= 6 && validateNetworkStep(draft)) return false;
-  if (targetIndex >= 7 && validateSecurityStep(draft)) return false;
-  if (targetIndex >= 8 && validateArtifactsStep(draft)) return false;
-  if (targetIndex >= 9 && validateDatabaseStep(draft)) return false;
-  if (targetIndex >= 10 && !draft.executionStarted) return false;
+  if (targetIndex >= 3 && validateLayoutStep(draft)) return false;
+  if (targetIndex >= 4 && validateStorageStep(draft, hostIds)) return false;
+  if (targetIndex >= 5 && validateNetworkStep(draft)) return false;
+  if (targetIndex >= 6 && validateSecurityStep(draft)) return false;
+  if (targetIndex >= 7 && validateArtifactsStep(draft)) return false;
+  if (targetIndex >= 8 && validateDatabaseStep(draft)) return false;
+  if (targetIndex >= 9 && !draft.executionStarted) return false;
   return true;
 }

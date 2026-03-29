@@ -25,6 +25,13 @@
   min-width: min-content;
 }
 
+.wizard-step-hint {
+  display: block;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  max-width: 100%;
+}
+
 /*
  * Stepper.Item renders a Button; the icon uses currentColor. Without this, the selected step’s
  * outlined button text color can override the semantic success/idle/error colors and read as a gray circle.

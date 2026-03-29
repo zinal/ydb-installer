@@ -1,5 +1,9 @@
 import type { DiscoverySnapshot, InstallationSession } from '@/api/client';
-import { clampStructuralWizardStep, WIZARD_STEP_STORAGE_KEY } from './wizardStepStorage';
+import {
+  clampStructuralWizardStep,
+  migrateLegacyWizardStepIndex,
+  WIZARD_STEP_STORAGE_KEY,
+} from './wizardStepStorage';
 
 /**
  * Resolves the post-login route from persisted session status (domain.SessionStatus),
@@ -10,7 +14,7 @@ export function resolvePostLoginDestination(
   snapshot: DiscoverySnapshot | undefined,
 ): string {
   if (session.mode === 'batch') {
-    return '/configuration?step=10';
+    return '/configuration?step=9';
   }
   const status = session.status;
 
@@ -23,7 +27,7 @@ export function resolvePostLoginDestination(
   }
 
   if (status === 'validating' || status === 'awaiting_approval') {
-    return '/configuration?step=9';
+    return '/configuration?step=8';
   }
 
   let saved: number | null = null;
@@ -31,7 +35,7 @@ export function resolvePostLoginDestination(
     const raw = sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
     if (raw != null) {
       const n = parseInt(raw, 10);
-      if (Number.isFinite(n)) saved = n;
+      if (Number.isFinite(n)) saved = migrateLegacyWizardStepIndex(n);
     }
   } catch {
     /* ignore */
@@ -44,17 +48,17 @@ export function resolvePostLoginDestination(
   } else if (!snapshot?.collectedAt) {
     rawStep = Math.min(Math.max(rawStep, 0), 1);
   } else {
-    rawStep = Math.max(rawStep, 2);
+    rawStep = Math.max(rawStep, 1);
   }
 
   if (status === 'discovery_ready') {
-    rawStep = Math.max(rawStep, snapshot?.collectedAt ? 2 : 1);
+    rawStep = Math.max(rawStep, 1);
   }
   if (status === 'configuring') {
-    rawStep = Math.max(rawStep, 3);
+    rawStep = Math.max(rawStep, 2);
   }
 
-  rawStep = Math.min(10, Math.max(0, rawStep));
+  rawStep = Math.min(9, Math.max(0, rawStep));
   const step = clampStructuralWizardStep(rawStep, session, snapshot);
   return `/configuration?step=${step}`;
 }
@@ -64,7 +68,7 @@ function defaultStepFromStatus(status: string): number {
     case 'discovery_ready':
       return 1;
     case 'configuring':
-      return 3;
+      return 2;
     case 'draft':
     default:
       return 0;
