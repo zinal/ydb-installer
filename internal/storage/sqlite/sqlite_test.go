@@ -440,6 +440,38 @@ func TestSQLite_LoadPhaseState_NotFound(t *testing.T) {
 	}
 }
 
+func TestSQLite_ResetAll_ClearsAndAllowsFreshWrites(t *testing.T) {
+	ctx := context.Background()
+	st := openTempStore(t)
+
+	sess := newSession(domain.ModeInteractive)
+	if err := st.SaveSession(ctx, sess); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	if err := st.SaveDiscoverySnapshot(ctx, sess.ID, &domain.DiscoverySnapshot{
+		CollectedAt: time.Now().UTC().Format(time.RFC3339Nano),
+	}); err != nil {
+		t.Fatalf("SaveDiscoverySnapshot: %v", err)
+	}
+	if err := st.ResetAll(ctx); err != nil {
+		t.Fatalf("ResetAll: %v", err)
+	}
+	if _, err := st.LoadSession(ctx, sess.ID); err != domain.ErrNotFound {
+		t.Fatalf("LoadSession after reset: got %v, want ErrNotFound", err)
+	}
+	sess2 := newSession(domain.ModeInteractive)
+	if err := st.SaveSession(ctx, sess2); err != nil {
+		t.Fatalf("SaveSession after reset: %v", err)
+	}
+	got, err := st.LoadSession(ctx, sess2.ID)
+	if err != nil {
+		t.Fatalf("LoadSession: %v", err)
+	}
+	if got.ID != sess2.ID {
+		t.Errorf("got session id %v, want %v", got.ID, sess2.ID)
+	}
+}
+
 // ---- Persistence across open/close -----------------------------------------
 
 func TestSQLite_PersistsAcrossReopenedStore(t *testing.T) {

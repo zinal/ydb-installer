@@ -102,3 +102,9 @@ export function workDestinationNavLabel(path: string, tt: TFn): string {
   if (base === '/configuration') return tt('nav.configuration');
   return tt('nav.wizard');
 }
+
+/** Whether the operator may reset persisted installation state (not during an active run). */
+export function canResetInstallationConfiguration(status: string | undefined): boolean {
+  if (!status) return false;
+  return status !== 'running' && status !== 'cancel_requested';
+}

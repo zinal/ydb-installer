@@ -3,6 +3,7 @@ package session_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/ydb-platform/ydb-installer/internal/app"
 	"github.com/ydb-platform/ydb-installer/internal/app/session"
@@ -225,5 +226,45 @@ func TestUpdateDraft_UpdatedAtAdvances(t *testing.T) {
 	got, _ := svc.Get(ctx, sess.ID)
 	if !got.UpdatedAt.After(before) {
 		t.Error("UpdatedAt did not advance after UpdateDraft")
+	}
+}
+
+// ---- ResetInstallationState ------------------------------------------------
+
+func TestResetInstallationState_ClearsStore(t *testing.T) {
+	ctx := context.Background()
+	svc := newService(t)
+
+	if _, err := svc.Create(ctx, domain.ModeInteractive, "a"); err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := svc.ResetInstallationState(ctx); err != nil {
+		t.Fatalf("ResetInstallationState: %v", err)
+	}
+	list, err := svc.List(ctx, 50, 0)
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(list) != 0 {
+		t.Errorf("List after reset: got %d sessions, want 0", len(list))
+	}
+}
+
+func TestResetInstallationState_BlockedWhenRunning(t *testing.T) {
+	ctx := context.Background()
+	st := teststore.New()
+	svc := &session.Service{Store: st}
+
+	sess, err := svc.Create(ctx, domain.ModeInteractive, "")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	sess.Status = domain.SessionRunning
+	sess.UpdatedAt = time.Now().UTC()
+	if err := st.SaveSession(ctx, sess); err != nil {
+		t.Fatalf("SaveSession: %v", err)
+	}
+	if err := svc.ResetInstallationState(ctx); err != domain.ErrInstallationRunning {
+		t.Fatalf("ResetInstallationState: got %v, want ErrInstallationRunning", err)
 	}
 }

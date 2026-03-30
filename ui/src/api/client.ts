@@ -163,6 +163,12 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  /** Clears persisted installation state on the server (empty SQLite / store). Operator, interactive mode only. */
+  resetInstallationState: () =>
+    apiFetch<void>('/api/v1/sessions/reset-state', {
+      method: 'POST',
+    }),
+
   getSession: (sessionId: string) =>
     apiFetch<InstallationSession>(`/api/v1/sessions/${sessionId}`),
 

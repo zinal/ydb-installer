@@ -26,4 +26,7 @@ type Store interface {
 
 	SavePhaseState(ctx context.Context, sessionID uuid.UUID, phases []domain.SessionPhase) error
 	LoadPhaseState(ctx context.Context, sessionID uuid.UUID) ([]domain.SessionPhase, error)
+
+	// ResetAll drops all application tables and re-applies the schema (baseline: SQLite).
+	ResetAll(ctx context.Context) error
 }

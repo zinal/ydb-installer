@@ -145,3 +145,12 @@ func (s *Store) LoadPhaseState(_ context.Context, sessionID uuid.UUID) ([]domain
 	copy(cp, v.Phases)
 	return cp, nil
 }
+
+func (s *Store) ResetAll(_ context.Context) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.sessions = make(map[uuid.UUID]*domain.InstallationSession)
+	s.snapshots = make(map[uuid.UUID]*domain.DiscoverySnapshot)
+	s.validations = make(map[uuid.UUID]*domain.ValidationReport)
+	return nil
+}

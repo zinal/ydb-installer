@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Flex, Loader, RadioGroup, Text, TextInput } from '@gravity-ui/uikit';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button, Card, Dialog, Flex, Loader, RadioGroup, Text, TextInput } from '@gravity-ui/uikit';
 import { api } from '@/api/client';
 import { t } from '@/i18n';
 import { resolvePostLoginDestination } from '@/navigation/postLoginRouting';
+import { clearWizardUiState } from '@/navigation/wizardStepStorage';
 import {
+  canResetInstallationConfiguration,
   currentPhaseFromSession,
   phaseLabel,
   phaseStateLabel,
@@ -21,7 +23,7 @@ import {
 const DISCOVERY_POLL_MS = 5000;
 
 export function HomePage() {
-  const { role, login, identity } = useAuthSession();
+  const { role, login, identity, isOperator } = useAuthSession();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -29,6 +31,8 @@ export function HomePage() {
   const [password, setPassword] = useState('');
   const [loginBusy, setLoginBusy] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetBanner, setResetBanner] = useState<{ tone: 'success' | 'danger'; text: string } | null>(null);
 
   const onSignIn = async () => {
     setLoginBusy(true);
@@ -64,6 +68,19 @@ export function HomePage() {
   const session = sessionQuery.data;
   const sessionId = session?.id;
 
+  const resetMutation = useMutation({
+    mutationFn: () => api.resetInstallationState(),
+    onSuccess: async () => {
+      clearWizardUiState();
+      await queryClient.invalidateQueries();
+      setResetDialogOpen(false);
+      setResetBanner({ tone: 'success', text: t('home.resetConfigurationSuccess') });
+    },
+    onError: (e: Error) => {
+      setResetBanner({ tone: 'danger', text: e.message || String(e) });
+    },
+  });
+
   const discoveryQuery = useQuery({
     queryKey: ['discovery', sessionId],
     queryFn: () => api.getDiscovery(sessionId!),
@@ -78,6 +95,12 @@ export function HomePage() {
 
   const currentPhase = currentPhaseFromSession(session);
   const primaryNavLabel = workDestinationNavLabel(workPath, t);
+  const resetAllowed =
+    identity != null &&
+    isOperator &&
+    identity.mode === 'interactive' &&
+    session != null &&
+    canResetInstallationConfiguration(session.status);
 
   return (
     <Flex direction="column" gap={5}>
@@ -180,14 +203,63 @@ export function HomePage() {
                     </Text>
                   ) : null}
                 </Flex>
-                <Button view="action" size="l" component={Link} to={workPath}>
-                  {t('home.continueTo')} {primaryNavLabel}
-                </Button>
+                <Flex direction="row" gap={3} wrap="wrap" style={{ marginTop: 8 }}>
+                  <Button view="action" size="l" component={Link} to={workPath}>
+                    {t('home.continueTo')} {primaryNavLabel}
+                  </Button>
+                  {isOperator && identity.mode === 'interactive' && session && (
+                    <Button
+                      view="outlined-danger"
+                      size="l"
+                      disabled={!resetAllowed || resetMutation.isPending}
+                      onClick={() => {
+                        setResetBanner(null);
+                        if (resetAllowed) setResetDialogOpen(true);
+                      }}
+                    >
+                      {t('home.resetConfiguration')}
+                    </Button>
+                  )}
+                </Flex>
+                {isOperator && identity.mode === 'interactive' && session && !resetAllowed && (
+                  <Text as="div" variant="body-2" color="secondary" style={{ marginTop: 8 }}>
+                    {t('home.resetConfigurationBlocked')}
+                  </Text>
+                )}
+                {resetBanner && (
+                  <Text
+                    as="div"
+                    variant="body-2"
+                    color={resetBanner.tone === 'success' ? 'positive' : 'danger'}
+                    style={{ marginTop: 8 }}
+                  >
+                    {resetBanner.text}
+                  </Text>
+                )}
               </>
             ) : null}
           </Flex>
         </Card>
       )}
+
+      <Dialog open={resetDialogOpen} onClose={() => !resetMutation.isPending && setResetDialogOpen(false)}>
+        <Dialog.Header caption={t('home.resetConfigurationConfirmTitle')} />
+        <Dialog.Body>
+          <Flex direction="column" gap={3}>
+            <Text as="div" variant="body-2">
+              {t('home.resetConfigurationConfirmBody')}
+            </Text>
+            <Text as="div" variant="body-2" color="secondary">
+              {t('home.resetConfigurationHint')}
+            </Text>
+          </Flex>
+        </Dialog.Body>
+        <Dialog.Footer
+          onClickButtonApply={() => void resetMutation.mutate()}
+          textButtonApply={t('home.resetConfigurationConfirmAction')}
+          propsButtonApply={{ view: 'outlined-danger', loading: resetMutation.isPending }}
+        />
+      </Dialog>
     </Flex>
   );
 }

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -325,4 +327,38 @@ func (s *Store) LoadPhaseState(ctx context.Context, sessionID uuid.UUID) ([]doma
 		return nil, err
 	}
 	return phases, nil
+}
+
+// ResetAll drops every non-system table and reapplies migrations. Table names come from
+// sqlite_master so new tables are cleared automatically without a hard-coded list.
+func (s *Store) ResetAll(ctx context.Context) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`)
+	if err != nil {
+		return err
+	}
+	var names []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if n != "" {
+			names = append(names, n)
+		}
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	for _, name := range names {
+		q := fmt.Sprintf(`DROP TABLE IF EXISTS %s`, sqliteQuoteIdent(name))
+		if _, err := s.db.ExecContext(ctx, q); err != nil {
+			return err
+		}
+	}
+	return s.migrate()
+}
+
+func sqliteQuoteIdent(name string) string {
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }

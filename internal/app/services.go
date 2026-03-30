@@ -16,6 +16,8 @@ type SessionService interface {
 	List(ctx context.Context, limit, offset int) ([]domain.InstallationSession, error)
 	UpdateDraft(ctx context.Context, id uuid.UUID, patch SessionDraftPatch) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	// ResetInstallationState clears persisted installation data when no run is active (FR-INTERACTIVE).
+	ResetInstallationState(ctx context.Context) error
 }
 
 // SessionDraftPatch is a partial update for autosave (FR-USABILITY-004).

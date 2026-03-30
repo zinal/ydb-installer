@@ -82,6 +82,8 @@ func (s *Services) UpdateDraft(context.Context, uuid.UUID, app.SessionDraftPatch
 }
 func (s *Services) Delete(context.Context, uuid.UUID) error { return domain.ErrNotImplemented }
 
+func (s *Services) ResetInstallationState(context.Context) error { return domain.ErrNotImplemented }
+
 func (s *Services) SetTargets(context.Context, uuid.UUID, []domain.TargetHost) error {
 	return domain.ErrNotImplemented
 }
