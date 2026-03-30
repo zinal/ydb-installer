@@ -59,3 +59,17 @@ func (s *Service) UpdateDraft(ctx context.Context, id uuid.UUID, patch app.Sessi
 func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 	return s.Store.DeleteSession(ctx, id)
 }
+
+func (s *Service) ResetInstallationState(ctx context.Context) error {
+	list, err := s.Store.ListSessions(ctx, 50, 0)
+	if err != nil {
+		return err
+	}
+	for i := range list {
+		st := list[i].Status
+		if st == domain.SessionRunning || st == domain.SessionCancelRequested {
+			return domain.ErrInstallationRunning
+		}
+	}
+	return s.Store.ResetAll(ctx)
+}

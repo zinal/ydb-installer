@@ -37,6 +37,7 @@ func NewRouter(d Deps) http.Handler {
 		r.Route("/sessions", func(r chi.Router) {
 			r.Get("/", listSessions(d))
 			r.With(requireAnyRole(d, domain.RoleOperator, domain.RoleObserver)).Post("/", createSession(d))
+			r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Post("/reset-state", resetInstallationState(d))
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", getSession(d))
 				r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Patch("/", patchSession(d))

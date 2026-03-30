@@ -10,4 +10,6 @@ var (
 	ErrForbidden      = errors.New("forbidden")
 	ErrConflict       = errors.New("conflict")
 	ErrValidation     = errors.New("validation failed")
+	// ErrInstallationRunning is returned when a reset would discard state while execution is active.
+	ErrInstallationRunning = errors.New("installation is running; wait for it to finish or cancel before resetting")
 )

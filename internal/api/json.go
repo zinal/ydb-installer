@@ -24,7 +24,7 @@ func writeAPIError(w http.ResponseWriter, err error) {
 		code = http.StatusForbidden
 	case domain.ErrForbidden:
 		code = http.StatusForbidden
-	case domain.ErrConflict:
+	case domain.ErrConflict, domain.ErrInstallationRunning:
 		code = http.StatusConflict
 	case domain.ErrValidation:
 		code = http.StatusBadRequest

@@ -46,3 +46,7 @@ func (Store) SavePhaseState(ctx context.Context, sessionID uuid.UUID, phases []d
 func (Store) LoadPhaseState(ctx context.Context, sessionID uuid.UUID) ([]domain.SessionPhase, error) {
 	return nil, domain.ErrNotImplemented
 }
+
+func (Store) ResetAll(context.Context) error {
+	return domain.ErrNotImplemented
+}

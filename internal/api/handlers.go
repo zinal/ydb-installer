@@ -106,6 +106,16 @@ func deleteSession(d Deps) http.HandlerFunc {
 	}
 }
 
+func resetInstallationState(d Deps) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := d.Sessions.ResetInstallationState(r.Context()); err != nil {
+			writeAPIError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
 func setTargets(d Deps) http.HandlerFunc {
 	type body struct {
 		Targets []domain.TargetHost `json:"targets"`
