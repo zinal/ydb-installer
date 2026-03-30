@@ -20,6 +20,7 @@ import type {
 import { useWatch } from 'react-hook-form';
 import type { TargetsForm } from './targetForm';
 import type { ConfigurationDraft, DefaultSshAuthMode, TargetRowAuthMode } from './configurationDraft';
+import { splitImportLines } from './parseImportHostLines';
 import { defaultSshSummaryLines, rowSshSummaryLines } from './targetSshSummary';
 import { t } from '@/i18n';
 
@@ -76,6 +77,8 @@ export function TargetsStep({
   const [editingDefaults, setEditingDefaults] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [defaultKeyLabel, setDefaultKeyLabel] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importText, setImportText] = useState('');
   const defaultKeyInputRef = useRef<HTMLInputElement>(null);
   const rowKeyInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,6 +134,44 @@ export function TargetsStep({
       sshPassword: '',
       sshKeySelected: false,
     });
+  };
+
+  const closeImportDialog = () => {
+    setImportDialogOpen(false);
+    setImportText('');
+  };
+
+  const applyImportHosts = () => {
+    const existing = new Set<string>();
+    for (const row of targets) {
+      const a = row.address?.trim();
+      if (a) existing.add(a.toLowerCase());
+    }
+    const seenInPaste = new Set<string>();
+    const hostnames: string[] = [];
+    for (const line of splitImportLines(importText)) {
+      const key = line.toLowerCase();
+      if (existing.has(key) || seenInPaste.has(key)) continue;
+      seenInPaste.add(key);
+      hostnames.push(line);
+    }
+    const port = draft.defaultSsh.port;
+    const user = draft.defaultSsh.user || defaultTemplateUser;
+    for (const address of hostnames) {
+      append({
+        address,
+        sshPort: port,
+        user,
+        sshPassword: '',
+        sshKeySelected: false,
+      });
+    }
+    closeImportDialog();
+    if (!readOnly && hostnames.length > 0) {
+      window.setTimeout(() => {
+        onCommitTargets();
+      }, 0);
+    }
   };
 
   const onRemoveRow = (idx: number) => {
@@ -324,9 +365,14 @@ export function TargetsStep({
         <Flex justifyContent="space-between" alignItems="center" style={{ marginBottom: 12 }} wrap="wrap" gap={2}>
           <Text variant="subheader-2">{t('wizard.targets.hostList')}</Text>
           {!readOnly && (
-            <Button view="outlined" onClick={onAddRow}>
-              {t('wizard.targets.add')}
-            </Button>
+            <Flex gap={2} wrap="wrap">
+              <Button view="outlined" onClick={() => setImportDialogOpen(true)}>
+                {t('wizard.targets.importHosts')}
+              </Button>
+              <Button view="outlined" onClick={onAddRow}>
+                {t('wizard.targets.add')}
+              </Button>
+            </Flex>
           )}
         </Flex>
 
@@ -440,6 +486,46 @@ export function TargetsStep({
         <Dialog.Footer
           onClickButtonApply={confirmEditDialog}
           textButtonApply={t('wizard.dialog.done')}
+          propsButtonApply={{ view: 'action' }}
+        />
+      </Dialog>
+
+      <Dialog open={importDialogOpen} onClose={closeImportDialog}>
+        <Dialog.Header caption={t('wizard.targets.importHostsTitle')} />
+        <Dialog.Body>
+          <Flex direction="column" gap={2}>
+            <Text color="secondary" style={{ fontSize: 13 }}>
+              {t('wizard.targets.importHostsHint')}
+            </Text>
+            <label htmlFor="installer-import-hosts" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <Text variant="subheader-2">{t('wizard.targets.importHostsLabel')}</Text>
+              <textarea
+                id="installer-import-hosts"
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                rows={12}
+                style={{
+                  width: '100%',
+                  minWidth: 280,
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  padding: '8px 12px',
+                  borderRadius: 4,
+                  border: '1px solid var(--g-color-line-generic)',
+                  background: 'var(--g-color-base-background)',
+                  color: 'var(--g-color-text-primary)',
+                }}
+              />
+            </label>
+          </Flex>
+        </Dialog.Body>
+        <Dialog.Footer
+          textButtonCancel={t('wizard.dialog.cancel')}
+          onClickButtonCancel={closeImportDialog}
+          textButtonApply={t('wizard.targets.importHostsApply')}
+          onClickButtonApply={applyImportHosts}
           propsButtonApply={{ view: 'action' }}
         />
       </Dialog>
