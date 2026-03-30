@@ -38,6 +38,6 @@ mkdir -p "${EMBED_DIR}"
 cp -a "${UI_DIR}/dist/." "${EMBED_DIR}/"
 
 echo "==> go build -> ${OUT}"
-go build -o "${OUT}" ./cmd/installer/
+go build -tags production -o "${OUT}" ./cmd/installer/
 
 echo "Done: $(cd "$(dirname "${OUT}")" && pwd)/$(basename "${OUT}")"
