@@ -54,7 +54,7 @@ This script:
 
 1. Runs `npm ci` and `npm run build` in `ui/` (reproducible installs from `ui/package-lock.json`).
 2. Replaces `cmd/installer/web/` with the contents of `ui/dist/` (required for `//go:embed all:web`).
-3. Runs `go build -o ydb-installer ./cmd/installer/`.
+3. Runs `go build -tags production -o ydb-installer ./cmd/installer/` (production tag enables HTTPS per FR-SECURITY-001).
 
 **Environment variables:**
 
@@ -96,13 +96,17 @@ The resulting executable contains the embedded UI and does not require Node at r
 3. **Build the Installer binary** from the repository root:
 
    ```bash
-   go build -o ydb-installer ./cmd/installer/
+   go build -tags production -o ydb-installer ./cmd/installer/
    ```
 
 ## Runtime flags (reference)
 
-- `-listen` — HTTP listen address (default `:8443`).
-- `-data-dir` — writable directory for SQLite and local state (default `./data`; override with env `YDB_INSTALLER_DATA_DIR` if you set it in code).
+- `-listen` — listen address (default `:8443`). **Production builds** (`-tags production` or `scripts/build-production.sh`) serve **HTTPS** on this address.
+- `-data-dir` — writable directory for SQLite and local state (default `./data`; override with env `YDB_INSTALLER_DATA_DIR`).
+
+**TLS (production binary only):** The combined PEM file defaults to `<data-dir>/web.pem` (private key, leaf certificate, then optional intermediate CA chain in one file). Set `-tls-pem` or `YDB_INSTALLER_TLS_PEM` to use another path. If that file is missing, the installer generates a self-signed certificate and writes it to that path (first run only; refuses to overwrite). Use `-tls-san` to list DNS names or IPs for the generated certificate.
+
+**Development `go run` / `go build` without `-tags production`:** serves **plain HTTP** so the Vite dev server can proxy to the API without TLS termination.
 
 ## Checks
 

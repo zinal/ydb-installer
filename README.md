@@ -22,4 +22,4 @@ cd ui && npm install && npm run dev
 
 Open the URL Vite prints (typically `http://localhost:5173`); it proxies `/api` to the Go process.
 
-**Single binary (embedded UI)** — after a production build (see `BUILD.md`), run the executable you built (for example `./ydb-installer`). By default it serves HTTP on **`http://127.0.0.1:8443`**. Override the listen address with `-listen` and the state directory with `-data-dir` (see `BUILD.md`).
+**Single binary (embedded UI)** — after a production build (see `BUILD.md`), run the executable you built (for example `./ydb-installer`). It serves **HTTPS** on **`https://127.0.0.1:8443`** by default (TLS materials under `data/web.pem` or via `-tls-pem` / `YDB_INSTALLER_TLS_PEM`). Override the listen address with `-listen` and the state directory with `-data-dir` (see `BUILD.md`).
