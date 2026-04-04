@@ -106,8 +106,7 @@ Each subsection describes **one configuration-step form**: its role in the workf
 
 | Control | Type | Semantics |
 |---------|------|-----------|
-| Run discovery | Button | Starts discovery; disabled until targets are saved. |
-| Refresh discovery | Button | Re-runs discovery to update the Discovery Snapshot (FR-DISCOVERY-006). |
+| Run discovery | Button | Starts or re-runs discovery to update the Discovery Snapshot (FR-DISCOVERY-006); disabled until targets are saved. |
 | Progress / error display | Text, progress indicator | Shows running state and per-session errors without leaking secrets. |
 | Host inventory table or cards | Read-only grid | **Host** column: operator-entered target address from target definition and the resolved hostname or FQDN identified during discovery; when the two differ, show both on separate lines; when they are the same, a single line is sufficient. Other columns: OS, hardware summary, disk inventory, **Discovery status** (FR-DISCOVERY-003, FR-DISCOVERY-007). The status column SHALL show an explicit success indicator (for example **OK**) when discovery completed without a per-host error; otherwise it SHALL show the error text. |
 | Acknowledge discovery results | Checkbox or equivalent explicit action | Records the acknowledgment required by FR-INTERACTIVE-026A before the operator leaves this step. |

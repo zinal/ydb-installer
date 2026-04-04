@@ -30,7 +30,6 @@ type DiscoveryService interface {
 	SetTargets(ctx context.Context, sessionID uuid.UUID, targets []domain.TargetHost) error
 	RunDiscovery(ctx context.Context, sessionID uuid.UUID) error
 	GetSnapshot(ctx context.Context, sessionID uuid.UUID) (*domain.DiscoverySnapshot, error)
-	RefreshDiscovery(ctx context.Context, sessionID uuid.UUID) error
 }
 
 // ConfigurationService manages cluster config import/export (§6–9, FR-BATCH-003).

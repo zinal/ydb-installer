@@ -41,9 +41,7 @@ type Props = {
   targetsSaved: boolean;
   discoveryPhase: SessionPhase | undefined;
   runDiscoveryPending: boolean;
-  refreshDiscoveryPending: boolean;
   onRunDiscovery: () => void;
-  onRefreshDiscovery: () => void;
   runError: Error | null;
 };
 
@@ -56,13 +54,10 @@ export function DiscoveryStep({
   targetsSaved,
   discoveryPhase,
   runDiscoveryPending,
-  refreshDiscoveryPending,
   onRunDiscovery,
-  onRefreshDiscovery,
   runError,
 }: Props) {
-  const running =
-    discoveryPhase?.state === 'running' || runDiscoveryPending || refreshDiscoveryPending;
+  const running = discoveryPhase?.state === 'running' || runDiscoveryPending;
   const failedHosts = snapshot?.hosts?.filter((h) => h.discoveryError) ?? [];
 
   return (
@@ -83,15 +78,6 @@ export function DiscoveryStep({
               onClick={onRunDiscovery}
             >
               {t('wizard.discovery.run')}
-            </Button>
-            <Button
-              view="outlined"
-              size="l"
-              disabled={!targetsSaved || readOnly}
-              loading={refreshDiscoveryPending}
-              onClick={onRefreshDiscovery}
-            >
-              {t('wizard.discovery.refresh')}
             </Button>
           </Flex>
         )}

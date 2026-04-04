@@ -276,14 +276,6 @@ export function ConfigurationWizard() {
     },
   });
 
-  const refreshDiscovery = useMutation({
-    mutationFn: () => api.refreshDiscovery(sessionId!),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['session', sessionId] });
-      qc.invalidateQueries({ queryKey: ['discovery', sessionId] });
-    },
-  });
-
   const onSaveTargets = handleSubmit((data) => {
     const cleaned: TargetHost[] = [];
     data.targets.forEach((row, idx) => {
@@ -407,9 +399,7 @@ export function ConfigurationWizard() {
             targetsSaved={targetsSaved}
             discoveryPhase={discoveryPhase}
             runDiscoveryPending={runDiscovery.isPending}
-            refreshDiscoveryPending={refreshDiscovery.isPending}
             onRunDiscovery={() => runDiscovery.mutate()}
-            onRefreshDiscovery={() => refreshDiscovery.mutate()}
             runError={runDiscovery.error as Error | null}
           />
         );
@@ -458,7 +448,6 @@ export function ConfigurationWizard() {
     targetsSaved,
     discoveryPhase,
     runDiscovery,
-    refreshDiscovery,
     startExecutionMutation,
     onSaveTargets,
   ]);

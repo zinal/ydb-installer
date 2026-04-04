@@ -91,9 +91,6 @@ func (s *Services) RunDiscovery(context.Context, uuid.UUID) error { return domai
 func (s *Services) GetSnapshot(context.Context, uuid.UUID) (*domain.DiscoverySnapshot, error) {
 	return nil, domain.ErrNotImplemented
 }
-func (s *Services) RefreshDiscovery(context.Context, uuid.UUID) error {
-	return domain.ErrNotImplemented
-}
 
 func (s *Services) GetConfiguration(ctx context.Context, sessionID uuid.UUID) (*domain.ClusterLayout, error) {
 	state, err := s.readState(ctx, sessionID)
