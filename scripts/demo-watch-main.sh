@@ -23,7 +23,7 @@ set -euo pipefail
 
 REMOTE="${DEMO_WATCH_REMOTE:-origin}"
 BRANCH="${DEMO_WATCH_BRANCH:-main}"
-INTERVAL="${DEMO_WATCH_INTERVAL:-300}"
+INTERVAL="${DEMO_WATCH_INTERVAL:-60}"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
