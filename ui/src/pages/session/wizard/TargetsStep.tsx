@@ -225,12 +225,15 @@ export function TargetsStep({
         label={t('wizard.field.sshPassword')}
         type="password"
         placeholder={t('wizard.targets.passwordPlaceholder')}
-        onUpdate={() =>
-          patchDraft((d) => ({
-            ...d,
-            defaultSsh: { ...d.defaultSsh, passwordSet: true },
-          }))
-        }
+        {...register('defaultSshPassword', {
+          onChange: (e) => {
+            const v = String((e.target as HTMLInputElement).value);
+            patchDraft((d) => ({
+              ...d,
+              defaultSsh: { ...d.defaultSsh, passwordSet: Boolean(v.trim()) },
+            }));
+          },
+        })}
       />
     ) : null;
 
