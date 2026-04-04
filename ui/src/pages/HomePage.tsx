@@ -124,33 +124,43 @@ export function HomePage() {
               {t('auth.signInHint')}
             </Text>
 
-            <Flex direction="column" gap={4} style={{ maxWidth: 440 }}>
-              <RadioGroup
-                size="l"
-                name="role"
-                options={[
-                  { value: 'operator', content: t('auth.roleOperator') },
-                  { value: 'observer', content: t('auth.roleObserver') },
-                ]}
-                value={selectedRole}
-                onUpdate={(v) => setSelectedRole(v as 'operator' | 'observer')}
-              />
-              <TextInput
-                label={t('auth.password')}
-                type="password"
-                value={password}
-                onUpdate={setPassword}
-                size="l"
-              />
-              <Button view="action" size="l" loading={loginBusy} onClick={() => void onSignIn()}>
-                {t('auth.submit')}
-              </Button>
-              {loginError && (
-                <Text as="div" color="danger">
-                  {loginError}
-                </Text>
-              )}
-            </Flex>
+            <form
+              style={{ maxWidth: 440 }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!loginBusy) void onSignIn();
+              }}
+            >
+              <Flex direction="column" gap={4}>
+                <RadioGroup
+                  size="l"
+                  name="role"
+                  options={[
+                    { value: 'operator', content: t('auth.roleOperator') },
+                    { value: 'observer', content: t('auth.roleObserver') },
+                  ]}
+                  value={selectedRole}
+                  onUpdate={(v) => setSelectedRole(v as 'operator' | 'observer')}
+                />
+                <TextInput
+                  label={t('auth.password')}
+                  type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onUpdate={setPassword}
+                  size="l"
+                />
+                <Button type="submit" view="action" size="l" loading={loginBusy}>
+                  {t('auth.submit')}
+                </Button>
+                {loginError && (
+                  <Text as="div" color="danger">
+                    {loginError}
+                  </Text>
+                )}
+              </Flex>
+            </form>
           </Flex>
         </Card>
       ) : (
