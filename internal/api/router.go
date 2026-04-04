@@ -46,7 +46,6 @@ func NewRouter(d Deps) http.Handler {
 				r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Post("/targets", setTargets(d))
 				r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Post("/discovery/run", runDiscovery(d))
 				r.Get("/discovery", getDiscovery(d))
-				r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Post("/discovery/refresh", refreshDiscovery(d))
 
 				r.Get("/configuration", getConfiguration(d))
 				r.With(requireRole(d, domain.RoleOperator), requireInteractiveMode(d)).Put("/configuration", putConfiguration(d))

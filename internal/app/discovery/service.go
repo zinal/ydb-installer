@@ -48,10 +48,6 @@ func (s *Service) RunDiscovery(ctx context.Context, sessionID uuid.UUID) error {
 	return s.runDiscovery(ctx, sessionID)
 }
 
-func (s *Service) RefreshDiscovery(ctx context.Context, sessionID uuid.UUID) error {
-	return s.runDiscovery(ctx, sessionID)
-}
-
 func (s *Service) runDiscovery(ctx context.Context, sessionID uuid.UUID) error {
 	sess, err := s.Store.LoadSession(ctx, sessionID)
 	if err != nil {

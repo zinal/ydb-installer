@@ -187,9 +187,6 @@ export const api = {
   getDiscovery: (sessionId: string) =>
     apiFetch<DiscoverySnapshot>(`/api/v1/sessions/${sessionId}/discovery`),
 
-  refreshDiscovery: (sessionId: string) =>
-    apiFetch<void>(`/api/v1/sessions/${sessionId}/discovery/refresh`, { method: 'POST' }),
-
   getTopologies: () => apiFetch<string[]>('/api/v1/metadata/topologies'),
 
   getArtifactModes: () => apiFetch<string[]>('/api/v1/metadata/artifact-modes'),

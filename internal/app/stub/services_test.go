@@ -261,20 +261,20 @@ func TestConfiguring_DiscoveryPhaseSucceeded(t *testing.T) {
 	}
 }
 
-func TestConfiguring_RefreshDiscoveryUpdatesSnapshot(t *testing.T) {
+func TestConfiguring_SecondRunDiscoveryUpdatesSnapshot(t *testing.T) {
 	ctx := context.Background()
 	svc := newServices(t)
 
 	sess := svc.advanceToConfiguring(t, ctx)
 	first, _ := svc.disc.GetSnapshot(ctx, sess.ID)
 
-	if err := svc.disc.RefreshDiscovery(ctx, sess.ID); err != nil {
-		t.Fatalf("RefreshDiscovery: %v", err)
+	if err := svc.disc.RunDiscovery(ctx, sess.ID); err != nil {
+		t.Fatalf("second RunDiscovery: %v", err)
 	}
 
 	second, _ := svc.disc.GetSnapshot(ctx, sess.ID)
 	if second.CollectedAt == "" {
-		t.Error("refreshed snapshot CollectedAt is empty")
+		t.Error("snapshot after second run CollectedAt is empty")
 	}
 	_ = first
 }

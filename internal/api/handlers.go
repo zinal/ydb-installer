@@ -167,20 +167,6 @@ func getDiscovery(d Deps) http.HandlerFunc {
 	}
 }
 
-func refreshDiscovery(d Deps) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id, ok := parseSessionID(w, r)
-		if !ok {
-			return
-		}
-		if err := d.Discovery.RefreshDiscovery(r.Context(), id); err != nil {
-			writeAPIError(w, err)
-			return
-		}
-		w.WriteHeader(http.StatusAccepted)
-	}
-}
-
 func getConfiguration(d Deps) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := parseSessionID(w, r)

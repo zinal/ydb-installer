@@ -312,9 +312,9 @@ func TestGetSnapshot_AfterRunDiscoveryContainsHosts(t *testing.T) {
 	}
 }
 
-// ---- RefreshDiscovery -------------------------------------------------------
+// ---- RunDiscovery (repeat run) ---------------------------------------------
 
-func TestRefreshDiscovery_UpdatesSnapshotAndKeepsConfiguringStatus(t *testing.T) {
+func TestRunDiscovery_SecondRunUpdatesSnapshotAndKeepsConfiguringStatus(t *testing.T) {
 	ctx := context.Background()
 	sessSvc, discSvc := setup(t, testdiscovery.Successful())
 	sess := createDraftSession(t, ctx, sessSvc)
@@ -325,19 +325,19 @@ func TestRefreshDiscovery_UpdatesSnapshotAndKeepsConfiguringStatus(t *testing.T)
 	first, _ := discSvc.GetSnapshot(ctx, sess.ID)
 	firstAt := first.CollectedAt
 
-	if err := discSvc.RefreshDiscovery(ctx, sess.ID); err != nil {
-		t.Fatalf("RefreshDiscovery: %v", err)
+	if err := discSvc.RunDiscovery(ctx, sess.ID); err != nil {
+		t.Fatalf("second RunDiscovery: %v", err)
 	}
 
 	second, _ := discSvc.GetSnapshot(ctx, sess.ID)
 	// CollectedAt should be set (may equal first if clocks are identical in fast tests; just check non-empty).
 	if second.CollectedAt == "" {
-		t.Error("refreshed snapshot has empty CollectedAt")
+		t.Error("snapshot after second run has empty CollectedAt")
 	}
 	_ = firstAt // used to verify it was set
 
 	got, _ := sessSvc.Get(ctx, sess.ID)
 	if got.Status != domain.SessionConfiguring {
-		t.Errorf("Status after refresh = %q, want configuring", got.Status)
+		t.Errorf("Status after second run = %q, want configuring", got.Status)
 	}
 }
