@@ -1,5 +1,10 @@
 package domain
 
+import (
+	"strconv"
+	"strings"
+)
+
 // DiscoverySnapshot is immutable inventory per session (§1.4, FR-DISCOVERY-005).
 type DiscoverySnapshot struct {
 	SessionID   string           `json:"sessionId"`
@@ -46,7 +51,41 @@ type TargetHost struct {
 	Address     string `json:"address"`
 	Port        int    `json:"port,omitempty"`
 	User        string `json:"user,omitempty"`
-	BastionHost string `json:"bastionHost,omitempty"`
-	BastionUser string `json:"bastionUser,omitempty"`
-	HostID      string `json:"hostId,omitempty"`
+	// SSHPassword is optional password auth (FR-DISCOVERY-002A). Omitted from JSON API responses (FR-SECURITY-008).
+	SSHPassword *string `json:"sshPassword,omitempty"`
+	BastionHost string  `json:"bastionHost,omitempty"`
+	BastionUser string  `json:"bastionUser,omitempty"`
+	HostID      string  `json:"hostId,omitempty"`
+}
+
+// NormalizeSSHPort returns a positive TCP port, defaulting to 22.
+func NormalizeSSHPort(port int) int {
+	if port <= 0 {
+		return 22
+	}
+	return port
+}
+
+// MergeTargetHosts overlays incoming onto prev. When SSHPassword is omitted (nil), the previous row's password is kept if the host key (address + port) matches. A non-nil password (including empty after trim) replaces or clears the stored value.
+func MergeTargetHosts(prev, incoming []TargetHost) []TargetHost {
+	out := make([]TargetHost, len(incoming))
+	for i := range incoming {
+		t := incoming[i]
+		if t.SSHPassword != nil {
+			p := strings.TrimSpace(*t.SSHPassword)
+			if p == "" {
+				t.SSHPassword = nil
+			} else {
+				t.SSHPassword = &p
+			}
+		} else if i < len(prev) && targetHostMergeKey(prev[i]) == targetHostMergeKey(t) {
+			t.SSHPassword = prev[i].SSHPassword
+		}
+		out[i] = t
+	}
+	return out
+}
+
+func targetHostMergeKey(t TargetHost) string {
+	return strings.TrimSpace(strings.ToLower(t.Address)) + "\x00" + strconv.Itoa(NormalizeSSHPort(t.Port))
 }

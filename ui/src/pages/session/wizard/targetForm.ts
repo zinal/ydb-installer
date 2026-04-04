@@ -11,4 +11,8 @@ export type TargetFormRow = {
   sshKeySelected?: boolean;
 };
 
-export type TargetsForm = { targets: TargetFormRow[] };
+export type TargetsForm = {
+  targets: TargetFormRow[];
+  /** Default SSH password when rows use "following default" and default auth is password; not echoed from API. */
+  defaultSshPassword?: string;
+};

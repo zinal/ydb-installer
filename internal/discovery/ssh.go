@@ -67,7 +67,7 @@ func (d SSHDiscoverer) probeOne(ctx context.Context, t domain.TargetHost) domain
 		}
 	}
 
-	authMethods, closers, err := sshAuthMethods()
+	authMethods, closers, err := sshAuthMethods(t.SSHPassword)
 	if err != nil {
 		h.DiscoveryError = sanitizeProbeErr(err)
 		return h
@@ -308,9 +308,16 @@ func sshDialContext(ctx context.Context, addr string, cfg *ssh.ClientConfig) (*s
 	}
 }
 
-func sshAuthMethods() ([]ssh.AuthMethod, []ioCloser, error) {
+func sshAuthMethods(sshPassword *string) ([]ssh.AuthMethod, []ioCloser, error) {
 	var closers []ioCloser
 	var methods []ssh.AuthMethod
+
+	if sshPassword != nil {
+		p := strings.TrimSpace(*sshPassword)
+		if p != "" {
+			methods = append(methods, ssh.Password(p))
+		}
+	}
 
 	if sock := os.Getenv("SSH_AUTH_SOCK"); sock != "" {
 		conn, err := net.Dial("unix", sock)
@@ -342,7 +349,7 @@ func sshAuthMethods() ([]ssh.AuthMethod, []ioCloser, error) {
 	}
 
 	if len(methods) == 0 {
-		return nil, closers, errors.New("no SSH credentials: set SSH_AUTH_SOCK or place a key in ~/.ssh/id_ed25519 or ~/.ssh/id_rsa")
+		return nil, closers, errors.New("no SSH credentials: configure password auth, set SSH_AUTH_SOCK, or place a key in ~/.ssh/id_ed25519 or ~/.ssh/id_rsa")
 	}
 	return methods, closers, nil
 }

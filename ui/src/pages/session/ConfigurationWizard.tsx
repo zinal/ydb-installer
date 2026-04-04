@@ -87,6 +87,7 @@ export function ConfigurationWizard() {
   const { register, control, handleSubmit, reset, setValue } = useForm<TargetsForm>({
     defaultValues: {
       targets: [{ address: '', sshPort: 22, user: '', sshPassword: '', sshKeySelected: false }],
+      defaultSshPassword: '',
     },
   });
 
@@ -216,7 +217,7 @@ export function ConfigurationWizard() {
   useEffect(() => {
     const tgs = sessionQuery.data?.targets;
     if (tgs && tgs.length > 0) {
-      reset({ targets: tgs.map(normalizeTarget) });
+      reset({ targets: tgs.map(normalizeTarget), defaultSshPassword: '' });
     }
   }, [sessionQuery.data, reset]);
 
@@ -278,6 +279,7 @@ export function ConfigurationWizard() {
 
   const onSaveTargets = handleSubmit((data) => {
     const cleaned: TargetHost[] = [];
+    const defaultPw = (data.defaultSshPassword ?? '').trim();
     data.targets.forEach((row, idx) => {
       const fid = fields[idx]?.id;
       const raw = fid ? draft.targetAuthModeByFieldId[fid] : undefined;
@@ -295,11 +297,24 @@ export function ConfigurationWizard() {
           : row.sshPort > 0
             ? row.sshPort
             : 22;
-      cleaned.push({
+      const effectiveAuth =
+        mode === 'default' ? draft.defaultSsh.authMode : mode;
+      const entry: TargetHost = {
         address: trimmedHost,
         port,
         user: row.user?.trim() || undefined,
-      });
+      };
+      if (effectiveAuth === 'password') {
+        const rowPw = (row.sshPassword ?? '').trim();
+        const mergedPw =
+          mode === 'default' ? defaultPw || rowPw : rowPw;
+        if (mergedPw) {
+          entry.sshPassword = mergedPw;
+        }
+      } else {
+        entry.sshPassword = '';
+      }
+      cleaned.push(entry);
     });
     if (cleaned.length === 0) {
       return;

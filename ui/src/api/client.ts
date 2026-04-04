@@ -37,6 +37,8 @@ export interface TargetHost {
   address: string;
   port?: number;
   user?: string;
+  /** Set when saving password auth; omitted in GET responses. */
+  sshPassword?: string | null;
   hostId?: string;
   bastionHost?: string;
   bastionUser?: string;

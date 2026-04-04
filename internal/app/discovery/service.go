@@ -33,6 +33,7 @@ func (s *Service) SetTargets(ctx context.Context, sessionID uuid.UUID, targets [
 	if err != nil {
 		return err
 	}
+	targets = domain.MergeTargetHosts(sess.Targets, targets)
 	now := time.Now().UTC()
 	phases := domain.SetPhaseState(sess.Phases, domain.PhaseTargetDefinition, domain.PhaseSucceeded, "", now)
 	cur := domain.PhaseDiscovery
