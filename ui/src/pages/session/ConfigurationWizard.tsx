@@ -218,8 +218,15 @@ export function ConfigurationWizard() {
     const tgs = sessionQuery.data?.targets;
     if (tgs && tgs.length > 0) {
       reset({ targets: tgs.map(normalizeTarget), defaultSshPassword: '' });
+      const p = tgs[0]?.port;
+      if (p != null && p > 0) {
+        patchDraft((d) => ({
+          ...d,
+          defaultSsh: { ...d.defaultSsh, port: p },
+        }));
+      }
     }
-  }, [sessionQuery.data, reset]);
+  }, [sessionQuery.data, reset, patchDraft]);
 
   useEffect(() => {
     const tgs = sessionQuery.data?.targets;
@@ -235,7 +242,9 @@ export function ConfigurationWizard() {
       const next = { ...d.targetAuthModeByFieldId };
       fields.forEach((f, i) => {
         const row = tgs[i]!;
-        const port = row.port && row.port > 0 ? row.port : 22;
+        const parsed = parseHostPort(row.address ?? '');
+        const port =
+          row.port && row.port > 0 ? row.port : parsed.explicitPort ? parsed.port : 22;
         const user = (row.user ?? '').trim();
         const defPort = d.defaultSsh.port;
         const defUser = d.defaultSsh.user.trim();

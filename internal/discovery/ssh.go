@@ -88,7 +88,8 @@ func (d SSHDiscoverer) probeOne(ctx context.Context, t domain.TargetHost) domain
 	pctx, cancel := context.WithTimeout(ctx, probeTimeout)
 	defer cancel()
 
-	client, err := dialSSH(pctx, t.Address, port, t.BastionHost, t.BastionUser, cfg)
+	dialHost := sshDialHostOnly(t.Address)
+	client, err := dialSSH(pctx, dialHost, port, t.BastionHost, t.BastionUser, cfg)
 	if err != nil {
 		h.DiscoveryError = sanitizeProbeErr(err)
 		return h
@@ -247,6 +248,19 @@ func runRemote(ctx context.Context, client sshSessionClient, script string) (str
 	return string(out), err
 }
 
+// sshDialHostOnly returns host for TCP dial when address may embed :port; port is always taken from TargetHost.Port (FR-DISCOVERY-002C).
+func sshDialHostOnly(address string) string {
+	s := strings.TrimSpace(address)
+	if s == "" {
+		return s
+	}
+	host, _, err := net.SplitHostPort(s)
+	if err != nil {
+		return s
+	}
+	return host
+}
+
 func dialSSH(ctx context.Context, address string, port int, bastionHost, bastionUser string, cfg *ssh.ClientConfig) (sshSessionClient, error) {
 	addr := net.JoinHostPort(address, strconv.Itoa(port))
 	if bastionHost == "" {
@@ -334,6 +348,7 @@ func sshAuthMethods(sshPassword *string) ([]ssh.AuthMethod, []ioCloser, error) {
 	}
 	keyPaths := []string{
 		home + "/.ssh/id_ed25519",
+		home + "/.ssh/id_ecdsa",
 		home + "/.ssh/id_rsa",
 	}
 	for _, p := range keyPaths {
@@ -349,7 +364,7 @@ func sshAuthMethods(sshPassword *string) ([]ssh.AuthMethod, []ioCloser, error) {
 	}
 
 	if len(methods) == 0 {
-		return nil, closers, errors.New("no SSH credentials: configure password auth, set SSH_AUTH_SOCK, or place a key in ~/.ssh/id_ed25519 or ~/.ssh/id_rsa")
+		return nil, closers, errors.New("no SSH credentials: configure password auth, set SSH_AUTH_SOCK, or place a private key in ~/.ssh (e.g. id_ed25519, id_ecdsa, id_rsa)")
 	}
 	return methods, closers, nil
 }
