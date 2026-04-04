@@ -33,7 +33,7 @@ func listSessions(d Deps) http.HandlerFunc {
 			writeAPIError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, list)
+		writeJSON(w, http.StatusOK, redactSessionsForAPI(list))
 	}
 }
 
@@ -54,7 +54,7 @@ func createSession(d Deps) http.HandlerFunc {
 			writeAPIError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusCreated, sess)
+		writeJSON(w, http.StatusCreated, redactSessionForAPI(sess))
 	}
 }
 
@@ -69,7 +69,7 @@ func getSession(d Deps) http.HandlerFunc {
 			writeAPIError(w, err)
 			return
 		}
-		writeJSON(w, http.StatusOK, sess)
+		writeJSON(w, http.StatusOK, redactSessionForAPI(sess))
 	}
 }
 
